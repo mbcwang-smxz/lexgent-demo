@@ -1,0 +1,26 @@
+type: "skill"
+id: "Skill_证据分析"
+alias: "s03"
+name: "证据智能分析"
+version: "2.0.0"
+description: |
+  生成证据目录，辅助"三性"分析，建立证据与事实映射链。
+  适用场景: 证据审查阶段。
+  关键依赖: 证据目录或证据材料。
+
+inputs:
+  - name: "source_docs"
+    required: true
+    description: "证据目录及相关质证意见。"
+
+on_result:
+  - type: "save_file"
+    id: "D03"
+    filename: "D03_证据分析报告.json"
+    type_ref: "证据分析"
+
+task:
+  prompt_ref: "law_agent/prompts/p_证据分析.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 4096

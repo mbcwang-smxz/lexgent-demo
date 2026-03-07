@@ -1,0 +1,29 @@
+type: "skill"
+id: "Skill_文档分类"
+alias: "s00"
+name: "案卷智能分类"
+version: "2.0.0"
+description: |
+  读取未分类文档的内容，识别其真实的法律文书类型。
+  适用场景: 案件初始化，文件上传后自动分类。
+
+batch: true  # 支持批量处理多文件（模板使用 {{#each}}）
+
+inputs:
+  - name: "target_doc"
+    required: true
+    description: "待分类的文档（支持批量）"
+
+on_result:
+  - type: "api_call"
+    endpoint: "classification"
+    fields:
+      filename: "文件名"
+      type: "分类类型"
+
+# 统一使用 task 定义 LLM 调用
+task:
+  prompt_ref: "law_agent/prompts/p_案件初始化.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 1024

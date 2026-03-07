@@ -1,0 +1,26 @@
+type: "skill"
+id: "Skill_庭审提纲"
+alias: "s06"
+name: "庭审提纲生成"
+version: "2.0.0"
+description: |
+  基于争议焦点及有争议事实，为法官生成庭审发问提纲。
+  适用场景: 开庭前准备。
+  关键依赖: D04争议焦点、D10有争议事实。
+
+inputs:
+  - name: "source_docs"
+    required: true
+    description: "争议焦点(D04)、有争议事实(D10)、证据分析(D03)。"
+
+on_result:
+  - type: "save_file"
+    id: "D06"
+    filename: "D06_庭审提纲.json"
+    type_ref: "庭审提纲"
+
+task:
+  prompt_ref: "law_agent/prompts/p_庭审提纲.hbs"
+  llm_config:
+    temperature: 0.2
+    max_tokens: 4096

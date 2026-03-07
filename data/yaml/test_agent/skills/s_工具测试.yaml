@@ -1,0 +1,28 @@
+type: "skill"
+id: "Skill_工具测试"
+alias: "s97"
+name: "工具调用测试"
+description: "演示如何调用外部工具（如计算器）。"
+version: "1.0.0"
+
+inputs: []
+
+task:
+  prompt: |
+    你是计算助手。
+    用户会提供两个数字，请提取参数调用【测试计算器(Func_计算测试)】。
+    参数提取规则：
+    1. a：第一个数字
+    2. b：第二个数字
+
+    用户查询：{{instruction}}
+
+    【重要】一旦获得工具的计算结果（JSON），请立即停止调用工具！
+    直接根据 JSON 结果回答用户，解释计算结果。
+    不要重复调用。不要自己进行数学计算，必须使用工具的结果。
+
+  functions: ["Func_计算测试"]
+
+  llm_config:
+    tool_choice: "auto"
+    max_turns: 2

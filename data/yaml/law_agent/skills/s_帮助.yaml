@@ -1,0 +1,17 @@
+type: "skill"
+id: "Skill_帮助"
+alias: "s13"
+name: "系统助手"
+version: "2.0.0"
+description: |
+  回答关于系统功能、技能列表及使用方法的问题。
+
+inputs:
+  - name: "skill_list"
+    system: "skill_list"  # 框架自动注入技能列表
+    required: false
+
+task:
+  prompt_ref: "law_agent/prompts/p_帮助.hbs"
+  llm_config:
+    temperature: 0.5

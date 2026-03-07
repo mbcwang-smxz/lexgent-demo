@@ -1,0 +1,45 @@
+type: "skill"
+id: "Skill_打招呼"
+alias: "s95"
+name: "打招呼"
+version: "1.0.0"
+execution_type: "tasks"
+description: |
+  向用户问好的示例技能。
+  演示参数提取和缺失参数询问功能。
+
+  激活指令: "你好"、"打个招呼"
+
+inputs:
+  - name: "user_name"
+    type: "string"
+    required: true
+    description: "用户的名字"
+    ask_prompt: "请问您的名字是？"
+
+tasks:
+  # 步骤1: 使用 LLM 生成个性化问候
+  - id: "生成问候"
+    prompt: |
+      请用友好、热情的方式向名为 "{{inputs.user_name}}" 的用户问好。
+
+      要求：
+      1. 称呼用户的名字
+      2. 表达欢迎之意
+      3. 询问有什么可以帮助的
+      4. 控制在2-3句话
+
+      直接输出问候语，不要添加任何解释。
+    outputs:
+      - id: "greeting"
+    llm_config:
+      temperature: 0.7
+
+  # 步骤2: 显示问候内容
+  - id: "显示问候"
+    type: "client"
+    action: "display_content"
+    instruction: ""
+    inputs:
+      - name: "content"
+        ref: "tasks.生成问候.greeting"

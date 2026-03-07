@@ -1,0 +1,25 @@
+type: "agent"
+name: "测试 Agent"
+version: "1.0.0"
+description: "框架功能测试与演示用 Agent，不含业务逻辑。"
+
+model_name: "gemini/gemini-3-pro-preview"
+
+default_config: "dev"
+
+skills:
+  - "test_agent/skills/s*.yaml"
+
+functions:
+  - "test_agent/functions/f*.yaml"
+
+context_prop:
+  path: "/test/context"
+
+settings:
+  timeout: 60000
+  context_refresh_strategy: "per_turn"
+
+metadata:
+  domain: "测试"
+  sub_domain: "框架验证"

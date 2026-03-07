@@ -1,0 +1,32 @@
+type: "skill"
+id: "Skill_显示文档"
+alias: "s15"
+name: "显示内容"
+version: "2.0.0"
+execution_type: "tasks"
+description: |
+  向用户显示内容。支持两种内容来源：
+
+  1. 文档模式：显示指定文档的全部内容
+     - inputs 中指定目标文档（如 D01、_response.md 等）
+
+  2. 文本模式：直接显示文本内容
+     - inputs 为空时，显示 instruction 中的文本
+
+  适用场景:
+    - 用户请求查看、阅读某个文档时
+    - 需要向用户展示分析结果或综合响应时
+    - 配合 Skill_响应综合 显示综合响应内容
+
+inputs:
+  - name: "target_content"
+    required: false
+    description: "目标文档（可选）。为空时显示 instruction 中的文本。"
+
+tasks:
+  - id: "显示"
+    type: "client"
+    action: "display_content"
+    inputs:
+      - name: "content"
+        ref: "inputs.target_content"

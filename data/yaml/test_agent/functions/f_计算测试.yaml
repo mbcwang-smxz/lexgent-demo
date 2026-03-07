@@ -1,0 +1,18 @@
+type: "function"
+id: "Func_计算测试"
+alias: "f90"
+calling_name: "test_calc"
+name: "测试计算器"
+description: "简单加法计算器，用于测试函数调用机制。"
+
+source: "test_agent/functions/w_计算测试"
+
+parameters:
+  a:
+    type: "number"
+    required: true
+    description: "第一个加数"
+  b:
+    type: "number"
+    required: true
+    description: "第二个加数"

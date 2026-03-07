@@ -1,0 +1,41 @@
+type: "skill"
+id: "Skill_测试"
+alias: "s99"
+name: "技能测试例子"
+version: "1.0.0"
+execution_type: "tasks"
+description: |
+  用于测试 tasks 多步骤执行的示例技能。
+  包含三个步骤：显示问候、LLM调用、显示文档。
+
+  激活指令: "运行技能测试例子"
+
+inputs:
+  - name: "test_doc"
+    required: false
+    description: "要显示的测试文档（可选）。"
+
+tasks:
+  # 步骤1: 显示 "你好！"
+  - id: "问候"
+    type: "client"
+    action: "display_content"
+    instruction: "你好！"
+
+  # 步骤2: 调用 LLM 询问素数问题
+  - id: "素数判断"
+    prompt: |
+      请回答97是素数吗？仅简要回答结论。
+    outputs:
+      - id: "判断结果"
+    llm_config:
+      temperature: 0.1
+
+  # 步骤3: 显示判断结果
+  - id: "显示结果"
+    type: "client"
+    action: "display_content"
+    instruction: "LLM 判断结果如下："
+    inputs:
+      - name: "llm_result"
+        ref: "tasks.素数判断.判断结果"

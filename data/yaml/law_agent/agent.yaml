@@ -1,0 +1,33 @@
+type: 'agent'
+name: '民事诉讼 Agent'
+version: '2.0.0'
+description: '辅助处理民事案件分析与文书起草。'
+
+model_name: 'deepseek/deepseek-chat'
+
+document_types: 'law_agent/types.yaml'
+
+skills:
+    - 'law_agent/skills/s*.yaml'
+
+tasks:
+    - 'law_agent/tasks/t*.yaml'
+
+functions:
+    - 'law_agent/functions/f*.yaml'
+
+analyser_prompt: 'law_agent/prompts/p_analyser.hbs'
+
+default_config: 'dev'
+
+context_prop:
+    key: 'caseId'
+    path: '/cases/{caseId}/context'
+
+metadata:
+    domain: '法律'
+    sub_domain: '民事诉讼'
+
+settings:
+    timeout: 60000
+    context_refresh_strategy: 'per_turn'

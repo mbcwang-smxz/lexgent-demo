@@ -1,0 +1,47 @@
+type: "skill"
+id: "Skill_skill_ref测试"
+alias: "s94"
+name: "skill_ref 测试例子"
+version: "1.0.0"
+execution_type: "tasks"
+description: |
+  用于测试 skill_ref 机制的示例技能。
+  步骤1: 通过 skill_ref 调用"Echo 回显"技能（黑盒执行，含 on_result）。
+  步骤2: 使用回显结果生成一段摘要。
+
+  激活指令: "运行 skill_ref 测试"
+
+inputs:
+  - name: "message"
+    required: true
+    primary: true
+    description: "需要处理的文本（传递给 Skill_echo）。"
+
+tasks:
+  # 步骤1: 引用 Skill_echo 作为子步骤
+  # skill_ref 会执行目标 Skill 的 on_result（保存 echo_out）
+  - skill_ref: "test_agent/skills/s_echo"
+    inputs:
+      - name: "message"
+        ref: "inputs.message"
+    outputs:
+      - id: "echo_result"
+        description: "Echo 回显的摘要结果"
+
+  # 步骤2: 基于回显结果生成摘要
+  - id: "生成摘要"
+    prompt: |
+      请根据以下内容，用一段话简要概括：
+
+      内容：
+      {{inputs.echo_data}}
+
+      要求：
+      - 简明扼要，不超过100字
+    inputs:
+      - name: "echo_data"
+        ref: "tasks.s_echo.echo_result"
+    outputs:
+      - id: "摘要"
+    llm_config:
+      temperature: 0.3

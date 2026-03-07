@@ -1,0 +1,32 @@
+type: "skill"
+id: "Skill_事实筛选"
+alias: "s05"
+name: "事实查核与筛选"
+version: "2.0.0"
+description: |
+  识别无异议事实与有争议事实，分别为判决书和庭审提纲服务。
+  适用场景: 庭审后事实整理。
+  关键依赖: 诉辩主张(D02)、庭审笔录。
+
+inputs:
+  - name: "source_docs"
+    required: true
+    description: "诉辩材料和庭审笔录。"
+
+on_result:
+  - type: "save_file"
+    id: "D05"
+    filename: "D05_无争议事实.json"
+    type_ref: "无争议事实"
+    source: "D05"
+  - type: "save_file"
+    id: "D10"
+    filename: "D10_有争议事实.json"
+    type_ref: "有争议事实"
+    source: "D10"
+
+task:
+  prompt_ref: "law_agent/prompts/p_事实筛选.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 4096

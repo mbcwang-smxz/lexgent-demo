@@ -1,0 +1,35 @@
+{
+  "name": "lexgent-demo",
+  "version": "1.0.0",
+  "description": "LexGent Demo - Data server, YAML server, and client for the LexGent Agent framework",
+  "main": "index.js",
+  "scripts": {
+    "start:data": "npx ts-node src/data_server/index.ts",
+    "start:yaml": "npx ts-node src/yaml_server/index.ts",
+    "start:client": "npx ts-node src/client/index.ts",
+    "start:all": "./scripts/start_all.sh",
+    "test": "jest --forceExit",
+    "test:unit": "jest tests/unit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/eventsource": "^1.1.15",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.6",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "eventsource": "^4.1.0",
+    "fs-extra": "^11.3.3",
+    "yaml": "^2.8.2"
+  }
+}

@@ -1,0 +1,26 @@
+type: "skill"
+id: "Skill_争议焦点"
+alias: "s04"
+name: "争议焦点归纳"
+version: "2.0.0"
+description: |
+  基于诉辩双方冲突点及证据情况，自动归纳案件核心争议。
+  适用场景: 庭前准备、归纳庭审重点。
+  关键依赖: D02诉辩主张、D03证据分析。
+
+inputs:
+  - name: "source_docs"
+    required: true
+    description: "诉辩主张(D02)和证据分析(D03)文档。"
+
+on_result:
+  - type: "save_file"
+    id: "D04"
+    filename: "D04_争议焦点信息.json"
+    type_ref: "争议焦点"
+
+task:
+  prompt_ref: "law_agent/prompts/p_争议焦点.hbs"
+  llm_config:
+    temperature: 0.2
+    max_tokens: 4096

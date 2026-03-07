@@ -1,0 +1,26 @@
+type: "skill"
+id: "Skill_当事人提取"
+alias: "s01"
+name: "当事人信息提取"
+version: "2.0.0"
+description: |
+  从起诉状等初始文件中提取原告与被告详细信息。
+  适用场景: 案件初始化阶段。
+  关键依赖: 至少一份起诉状性质的文书。
+
+inputs:
+  - name: "source_docs"
+    required: true
+    description: "起诉状或初始立案材料。"
+
+on_result:
+  - type: "save_file"
+    id: "D01"
+    filename: "D01_当事人信息.json"
+    type_ref: "当事人信息"
+
+task:
+  prompt_ref: "law_agent/prompts/p_当事人提取.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 4096

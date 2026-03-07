@@ -1,0 +1,22 @@
+type: "skill"
+id: "Skill_文件维护"
+alias: "s14"
+name: "案件环境维护"
+version: "2.0.0"
+description: |
+  处理清除生成文件、重置分析流程等维护指令。
+  需要读取文件列表元数据。
+
+inputs:
+  - name: "all_files"
+    type: "file_list"
+    description: "当前案件所有文件的元数据列表"
+    required: true
+
+on_result:
+  - type: "deletion"
+
+task:
+  prompt_ref: "law_agent/prompts/p_文件维护.hbs"
+  llm_config:
+    temperature: 0.1

@@ -1,0 +1,16 @@
+type: "function"
+id: "Func_echo"
+alias: "f92"
+calling_name: "echo"
+name: "Echo回显"
+description: "将输入消息原样回显，用于测试 REST API function 调用链路。"
+
+endpoint: "/api/tools/echo"
+method: "POST"
+base_url: "http://localhost:3000"
+
+parameters:
+  message:
+    type: "string"
+    required: true
+    description: "要回显的消息文本"

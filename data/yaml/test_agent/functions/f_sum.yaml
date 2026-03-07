@@ -1,0 +1,24 @@
+type: "function"
+id: "Func_worker测试"
+alias: "f91"
+calling_name: "test_worker"
+name: "内联加法测试"
+description: "简单加法计算器（inline source_code 模式），用于测试内联函数执行机制。"
+
+source_code: |
+  async function execute(args) {
+    const a = Number(args.a || 0);
+    const b = Number(args.b || 0);
+    return { sum: a + b };
+  }
+  module.exports = { execute };
+
+parameters:
+  a:
+    type: "number"
+    required: true
+    description: "第一个加数"
+  b:
+    type: "number"
+    required: true
+    description: "第二个加数"

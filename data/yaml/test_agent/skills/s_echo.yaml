@@ -1,0 +1,25 @@
+type: "skill"
+id: "Skill_echo"
+alias: "s90"
+name: "Echo 回显"
+version: "1.0.0"
+description: |
+  Echo 技能，通过调用 Func_echo API 回显用户输入。
+  用于测试 skill → function REST API 调用链路。
+
+inputs:
+  - name: "message"
+    required: true
+    primary: true
+    description: "要回显的文本内容"
+
+task:
+  prompt: |
+    请调用 echo 工具，将用户的消息原样传入。
+    用户消息：{{message}}
+
+    获得工具返回后，直接展示结果。
+  functions: ["Func_echo"]
+  llm_config:
+    tool_choice: "auto"
+    max_turns: 2

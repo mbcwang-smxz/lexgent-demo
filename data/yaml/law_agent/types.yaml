@@ -1,0 +1,89 @@
+type: "document_type"
+name: "法律文书类型注册表"
+version: "1.0.0"
+
+types:
+  # ===== 原始文档 (Raw) =====
+  - id: "民事起诉状"
+    name: "民事起诉状"
+    category: "raw"
+    format: "text"
+    description: "原告提交的起诉状文书。"
+
+  - id: "民事答辩状"
+    name: "民事答辩状"
+    category: "raw"
+    format: "text"
+    description: "被告提交的答辩状文书。"
+
+  - id: "证据目录"
+    name: "证据目录"
+    category: "raw"
+    format: "text"
+
+  - id: "庭审笔录"
+    name: "庭审笔录"
+    category: "raw"
+    format: "text"
+
+  - id: "询问笔录"
+    name: "询问笔录"
+    category: "raw"
+    format: "text"
+
+  # ===== 衍生文档 (Derived) =====
+  - id: "当事人信息"
+    name: "当事人信息"
+    category: "derived"
+    format: "json"
+    description: "从起诉状等材料提取的结构化当事人画像。"
+
+  - id: "诉辩主张"
+    name: "诉辩主张"
+    category: "derived"
+    format: "json"
+
+  - id: "证据分析"
+    name: "证据分析"
+    category: "derived"
+    format: "json"
+
+  - id: "争议焦点"
+    name: "争议焦点"
+    category: "derived"
+    format: "json"
+
+  - id: "无争议事实"
+    name: "无争议事实"
+    category: "derived"
+    format: "json"
+    description: "经事实筛选确认的无异议事实。"
+
+  - id: "有争议事实"
+    name: "有争议事实"
+    category: "derived"
+    format: "json"
+    description: "经事实筛选识别的有争议事实。"
+
+  - id: "庭审提纲"
+    name: "庭审提纲"
+    category: "derived"
+    format: "json"
+    description: "基于争议焦点生成的庭审发问提纲。"
+
+  - id: "事实认定"
+    name: "事实认定"
+    category: "derived"
+    format: "json"
+    description: "庭审后对争议事实的倾向性认定意见。"
+
+  - id: "裁判说理"
+    name: "裁判说理"
+    category: "derived"
+    format: "json"
+    description: "针对认定事实生成的法律论述与说理分析。"
+
+  - id: "裁判文书草稿"
+    name: "裁判文书草稿"
+    category: "derived"
+    format: "markdown"

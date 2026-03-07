@@ -1,0 +1,13 @@
+type: "skill"
+id: "Skill_worker测试"
+alias: "s96"
+name: "内联函数测试"
+version: "1.0.0"
+description: |
+  用于测试 inline function 执行模式的示例技能。
+  调用内联加法函数，返回两数之和。
+
+inputs: []
+
+task:
+  function_ref: "Func_worker测试"

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexGent Web Client</title>
+<style>
+:root {
+  --bg: #f5f5f5; --panel: #fff; --border: #e0e0e0; --text: #333;
+  --primary: #1a73e8; --primary-light: #e8f0fe;
+  --error: #d93025; --success: #188038; --muted: #666;
+  --sidebar-w: 260px; --header-h: 48px; --input-h: 56px;
+  --radius: 6px; --font: -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+.header { height: var(--header-h); background: var(--primary); color: #fff; display: flex; align-items: center; padding: 0 16px; gap: 16px; flex-shrink: 0; }
+.header h1 { font-size: 16px; font-weight: 600; }
+.header select, .header input { height: 30px; border: none; border-radius: 4px; padding: 0 8px; font-size: 13px; }
+.header select { background: rgba(255,255,255,0.2); color: #fff; }
+.header select option { color: #333; }
+.header input { width: 100px; background: rgba(255,255,255,0.2); color: #fff; }
+.header input::placeholder { color: rgba(255,255,255,0.6); }
+.header .spacer { flex: 1; }
+.header .status { font-size: 12px; opacity: 0.8; }
+.btn { height: 30px; padding: 0 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.btn-init { background: rgba(255,255,255,0.25); color: #fff; }
+.btn-init:hover { background: rgba(255,255,255,0.35); }
+
+/* Main layout */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: var(--sidebar-w); background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.sidebar-section { padding: 8px 0; }
+.sidebar-section h3 { font-size: 12px; color: var(--muted); padding: 4px 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sidebar-item { padding: 6px 12px; cursor: pointer; font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+.sidebar-item:hover { background: var(--primary-light); }
+.sidebar-item .alias { color: var(--primary); font-family: var(--mono); font-size: 12px; min-width: 40px; }
+.sidebar-item .desc { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-empty { padding: 8px 12px; font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* Chat area */
+.chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Messages */
+.msg { padding: 6px 12px; border-radius: var(--radius); max-width: 100%; font-size: 13px; line-height: 1.5; }
+.msg-user { background: var(--primary); color: #fff; align-self: flex-end; max-width: 70%; }
+.msg-log { background: var(--panel); border: 1px solid var(--border); }
+.msg-error { background: #fce8e6; color: var(--error); border: 1px solid #f5c6cb; }
+.msg-system { background: var(--primary-light); color: var(--primary); font-size: 12px; }
+.msg-complete { background: #e6f4ea; color: var(--success); font-weight: 500; }
+.msg-doc { background: var(--panel); border: 1px solid var(--border); width: 100%; }
+.msg-doc .doc-header { font-weight: 600; font-size: 12px; color: var(--primary); padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; cursor: pointer; user-select: none; }
+.msg-doc .doc-header::before { content: "\25BC "; font-size: 10px; }
+.msg-doc .doc-header.collapsed::before { content: "\25B6 "; }
+.msg-doc pre { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
+.msg-doc pre.collapsed { display: none; }
+
+/* Ask inline */
+.msg-ask { background: #fff8e1; border: 1px solid #ffecb3; }
+.msg-ask .ask-input { display: flex; gap: 8px; margin-top: 6px; }
+.msg-ask input { flex: 1; height: 28px; border: 1px solid #ccc; border-radius: 4px; padding: 0 8px; font-size: 13px; }
+.msg-ask button { height: 28px; padding: 0 12px; background: var(--primary); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+/* Input bar */
+.input-bar { height: var(--input-h); border-top: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
+.input-bar input { flex: 1; height: 36px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 12px; font-size: 14px; outline: none; }
+.input-bar input:focus { border-color: var(--primary); }
+.input-bar button { height: 36px; padding: 0 20px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 500; }
+.input-bar button:hover { background: #1557b0; }
+.input-bar button:disabled { background: #ccc; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>LexGent</h1>
+  <select id="agentSelect"><option value="law_agent">law_agent</option></select>
+  <input id="caseInput" placeholder="case-101" value="case-101">
+  <button class="btn btn-init" onclick="initSession()">Init</button>
+  <div class="spacer"></div>
+  <div class="status" id="statusText">Not connected</div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section" id="skillSection">
+      <h3>Skills</h3>
+      <div class="sidebar-empty">Loading...</div>
+    </div>
+    <div class="sidebar-section" id="funcSection">
+      <h3>Functions</h3>
+      <div class="sidebar-empty">Loading...</div>
+    </div>
+    <div class="sidebar-section" id="taskSection">
+      <h3>Tasks</h3>
+      <div class="sidebar-empty">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area">
+    <div class="messages" id="messages"></div>
+    <div class="input-bar">
+      <input id="cmdInput" placeholder="Enter command or message..." disabled
+             onkeydown="if(event.key==='Enter')sendInput()">
+      <button id="sendBtn" onclick="sendInput()" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+let agentId = 'law_agent';
+let caseId = null;
+let sessionId = null;
+let sse = null;
+let busy = false;
+let currentAskId = null;
+
+const $msg = document.getElementById('messages');
+const $input = document.getElementById('cmdInput');
+const $sendBtn = document.getElementById('sendBtn');
+const $status = document.getElementById('statusText');
+const $agent = document.getElementById('agentSelect');
+const $case = document.getElementById('caseInput');
+
+// --- Messages ---
+function addMsg(type, html) {
+  const div = document.createElement('div');
+  div.className = `msg msg-${type}`;
+  div.innerHTML = html;
+  $msg.appendChild(div);
+  $msg.scrollTop = $msg.scrollHeight;
+  return div;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// --- Sidebar ---
+async function loadSidebar() {
+  agentId = $agent.value;
+  await Promise.all([
+    loadList('skills', 'skillSection'),
+    loadList('functions', 'funcSection'),
+    loadList('tasks', 'taskSection'),
+  ]);
+}
+
+async function loadList(type, sectionId) {
+  const section = document.getElementById(sectionId);
+  try {
+    const res = await fetch(`${API}/agent/${agentId}/${type}`);
+    const data = await res.json();
+    const entries = Object.entries(data);
+    if (entries.length === 0) {
+      section.innerHTML = `<h3>${type}</h3><div class="sidebar-empty">None</div>`;
+      return;
+    }
+    let html = `<h3>${type} (${entries.length})</h3>`;
+    for (const [id, info] of entries) {
+      const alias = info.alias || id;
+      const desc = info.desc || info.description || '';
+      html += `<div class="sidebar-item" onclick="fillCmd('/${escHtml(alias)}')" title="${escHtml(id)}">
+        <span class="alias">/${escHtml(alias)}</span>
+        <span class="desc">${escHtml(desc)}</span>
+      </div>`;
+    }
+    section.innerHTML = html;
+  } catch {
+    section.innerHTML = `<h3>${type}</h3><div class="sidebar-empty">Failed to load</div>`;
+  }
+}
+
+function fillCmd(cmd) {
+  $input.value = cmd;
+  $input.focus();
+}
+
+// --- Session ---
+async function initSession() {
+  agentId = $agent.value;
+  const caseNumber = $case.value || 'case-101';
+
+  addMsg('system', `Initializing case ${escHtml(caseNumber)}...`);
+
+  try {
+    // Init case
+    const initRes = await fetch(`${API}/cases/init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseNumber, reset: true })
+    });
+    const initData = await initRes.json();
+    caseId = initData.caseId;
+
+    // Create session
+    const sessRes = await fetch(`${API}/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseNumber, caseId, agentId })
+    });
+    const sessData = await sessRes.json();
+    sessionId = sessData.sessionId;
+
+    // Connect SSE
+    connectSSE();
+
+    $input.disabled = false;
+    $sendBtn.disabled = false;
+    $status.textContent = `Session: ${sessionId.substring(0, 8)}...`;
+    addMsg('system', `Case ${escHtml(caseId)} initialized. Session ready.`);
+
+    // Load sidebar
+    loadSidebar();
+  } catch (e) {
+    addMsg('error', `Init failed: ${escHtml(e.message)}`);
+  }
+}
+
+function connectSSE() {
+  if (sse) sse.close();
+  sse = new EventSource(`${API}/session/${sessionId}/events`);
+
+  sse.addEventListener('log', (e) => {
+    const data = JSON.parse(e.data);
+    addMsg('log', escHtml(data.text || data.message || ''));
+  });
+
+  sse.addEventListener('error', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      addMsg('error', escHtml(data.text || data.message || 'Unknown error'));
+    } catch {}
+  });
+
+  sse.addEventListener('action', (e) => {
+    const data = JSON.parse(e.data);
+    handleAction(data);
+  });
+
+  sse.addEventListener('ask', (e) => {
+    const data = JSON.parse(e.data);
+    handleAsk(data);
+  });
+
+  sse.addEventListener('complete', (e) => {
+    const data = JSON.parse(e.data);
+    const ok = data.status === 'success';
+    addMsg('complete', `${ok ? '\u2705' : '\u274C'} Task ${ok ? 'completed' : 'failed'}${data.summary ? ' - ' + escHtml(data.summary) : ''}`);
+    setBusy(false);
+  });
+}
+
+// --- Actions ---
+async function handleAction(data) {
+  if (data.action === 'display_content' || data.action === 'display_document') {
+    if (data.inputs && data.inputs.length > 0) {
+      for (const file of data.inputs) {
+        let content = file.metadata?._content;
+        if (!content && caseId) {
+          try {
+            const res = await fetch(`${API}/cases/${caseId}/files/${encodeURIComponent(file.filename)}`);
+            content = await res.text();
+          } catch { content = '[Failed to load]'; }
+        }
+        const title = `${file.filename} (${file.type || 'unknown'})`;
+        const div = addMsg('doc', `<div class="doc-header" onclick="toggleDoc(this)">${escHtml(title)}</div><pre>${escHtml(content || '')}</pre>`);
+      }
+    } else if (data.instruction?.trim()) {
+      addMsg('doc', `<div class="doc-header" onclick="toggleDoc(this)">Agent Response</div><pre>${escHtml(data.instruction)}</pre>`);
+    }
+  }
+}
+
+function toggleDoc(header) {
+  header.classList.toggle('collapsed');
+  header.nextElementSibling.classList.toggle('collapsed');
+}
+
+// --- Ask ---
+function handleAsk(data) {
+  currentAskId = data.askId;
+  const div = addMsg('ask', `${escHtml(data.question)}<div class="ask-input"><input id="askInput" placeholder="Your answer..." onkeydown="if(event.key==='Enter')submitAsk()"><button onclick="submitAsk()">Reply</button></div>`);
+  document.getElementById('askInput')?.focus();
+}
+
+async function submitAsk() {
+  const input = document.getElementById('askInput');
+  if (!input || !currentAskId) return;
+  const answer = input.value.trim() || 'y';
+
+  try {
+    await fetch(`${API}/session/${sessionId}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ askId: currentAskId, input: answer })
+    });
+    input.closest('.msg-ask').innerHTML = `${escHtml('Answer: ' + answer)}`;
+  } catch (e) {
+    addMsg('error', `Reply failed: ${escHtml(e.message)}`);
+  }
+  currentAskId = null;
+}
+
+// --- Send input ---
+function setBusy(b) {
+  busy = b;
+  $sendBtn.disabled = b || !sessionId;
+  $input.disabled = b || !sessionId;
+  if (!b) $input.focus();
+}
+
+async function sendInput() {
+  const input = $input.value.trim();
+  if (!input || !sessionId || busy) return;
+
+  $input.value = '';
+  addMsg('user', escHtml(input));
+
+  if (input.startsWith('/')) {
+    // List commands
+    if (input === '/' || input === '/s' || input === '/f' || input === '/t' || input === '/list') {
+      loadSidebar();
+      addMsg('system', 'Sidebar refreshed.');
+      return;
+    }
+
+    // ! commands
+    if (input === '!clear-cache') {
+      try {
+        const res = await fetch(`${API}/agent/${agentId}/clear-cache`, { method: 'POST' });
+        const data = await res.json();
+        addMsg('system', data.message || data.status || 'Cache cleared');
+      } catch (e) { addMsg('error', e.message); }
+      return;
+    }
+
+    // Slash command execution
+    const match = input.substring(1).match(/^([^\s({]+)(.*)/);
+    if (!match) { addMsg('error', 'Invalid command'); return; }
+    const targetId = match[1];
+    const args = match[2] || '';
+
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/agent/${agentId}/execute_command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, command: 'skill', targetId, args })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        addMsg('error', `Command error: ${escHtml(err.error || res.statusText)}`);
+        setBusy(false);
+      }
+    } catch (e) {
+      addMsg('error', escHtml(e.message));
+      setBusy(false);
+    }
+  } else {
+    // Natural language - submit as task
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/session/${sessionId}/task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: input })
+      });
+      if (!res.ok) {
+        addMsg('error', `Task submission failed: ${res.statusText}`);
+        setBusy(false);
+      }
+    } catch (e) {
+      addMsg('error', escHtml(e.message));
+      setBusy(false);
+    }
+  }
+}
+
+// --- Init on load ---
+$agent.addEventListener('change', loadSidebar);
+
+// Auto-init
+addMsg('system', 'Click "Init" to start a session.');
+</script>
+</body>
+</html>

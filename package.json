@@ -7,7 +7,7 @@
     "start:data": "npx ts-node src/data_server/index.ts",
     "start:yaml": "npx ts-node src/yaml_server/index.ts",
     "start:client": "npx ts-node src/client/index.ts",
-    "start:all": "./scripts/start_all.sh",
+    "start:web": "npx ts-node src/web_server/index.ts",
     "test": "jest --forceExit",
     "test:unit": "jest tests/unit"
   },
@@ -17,6 +17,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@types/eventsource": "^1.1.15",
+    "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.6",
@@ -29,6 +30,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "eventsource": "^4.1.0",
+    "express": "^5.2.1",
     "fs-extra": "^11.3.3",
     "yaml": "^2.8.2"
   }

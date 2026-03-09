@@ -21,8 +21,8 @@ app.get('/{*splat}', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Web Server:    http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Web Server:    http://0.0.0.0:${PORT}`);
     console.log(`Agent Engine:  ${AGENT_SERVER_URL}`);
     console.log(`Data Server:   ${DATA_SERVER_URL}`);
 });

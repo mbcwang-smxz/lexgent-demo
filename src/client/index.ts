@@ -34,7 +34,7 @@ async function askLocal(query: string, rl: readline.Interface): Promise<string |
 
 async function fetchSkillMap(agentId: string): Promise<Record<string, { query: string, desc: string, alias?: string, params?: string }>> {
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/skills`);
+        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/skills?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
         if (!res.ok) throw new Error(res.statusText);
         return await res.json() as any;
     } catch (e: any) {
@@ -44,7 +44,7 @@ async function fetchSkillMap(agentId: string): Promise<Record<string, { query: s
 
 async function fetchFunctionMap(agentId: string): Promise<Record<string, { desc: string; alias?: string; params?: string }>> {
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/functions`);
+        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/functions?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
         if (!res.ok) throw new Error(res.statusText);
         return await res.json() as any;
     } catch (e: any) {
@@ -54,7 +54,7 @@ async function fetchFunctionMap(agentId: string): Promise<Record<string, { desc:
 
 async function fetchTaskMap(agentId: string): Promise<Record<string, { desc: string; alias?: string; params?: string }>> {
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/tasks`);
+        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/tasks?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
         if (!res.ok) throw new Error(res.statusText);
         return await res.json() as any;
     } catch (e: any) {

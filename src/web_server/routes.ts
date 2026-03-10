@@ -12,14 +12,21 @@ export function createProxyRoutes(agentUrl: string, dataUrl: string, yamlUrl: st
     // --- Agent Engine proxies ---
 
     // GET proxies
-    const agentGetPaths = [
-        '/agents',
+    router.get('/agents', (req, res) => proxyJson(agentUrl, req, res));
+
+    // Skills/functions/tasks need yamlServerUrl so the engine knows where to load configs
+    const agentListPaths = [
         '/agent/:agentId/skills',
         '/agent/:agentId/functions',
         '/agent/:agentId/tasks',
     ];
-    for (const p of agentGetPaths) {
-        router.get(p, (req, res) => proxyJson(agentUrl, req, res));
+    for (const p of agentListPaths) {
+        router.get(p, (req, res) => {
+            const basePath = req.originalUrl.replace(/^\/api/, '');
+            const sep = basePath.includes('?') ? '&' : '?';
+            const targetPath = `${basePath}${sep}yamlServerUrl=${encodeURIComponent(yamlUrl)}`;
+            proxyJson(agentUrl, req, res, 'GET', targetPath);
+        });
     }
 
     // POST proxies

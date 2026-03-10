@@ -1,6 +1,6 @@
 
 import readline from 'readline';
-import { ICaseStore } from '@/shared/interfaces';
+import { ICaseStore } from './case_store';
 
 export interface IActionHandler {
     log(text: string): void;
@@ -15,7 +15,8 @@ export class TaskRunner {
 
     constructor(
         private agentServerUrl: string,
-        private handler: IActionHandler
+        private handler: IActionHandler,
+        private serverUrls?: { dataServerUrl?: string; yamlServerUrl?: string }
     ) {}
 
     setCaseStore(caseStore: ICaseStore) {
@@ -40,7 +41,8 @@ export class TaskRunner {
                     caseNumber,
                     caseId,
                     agentId: options.agentId,
-                    ...options
+                    ...options,
+                    ...this.serverUrls
                 })
             });
             if (!res.ok) throw new Error(`Failed to create session: ${res.statusText}`);

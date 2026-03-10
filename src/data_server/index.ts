@@ -1,7 +1,7 @@
 import http from 'http';
 import { handleRequest } from './handler';
 
-import { CONFIG } from '@/shared/config/settings';
+import { CONFIG } from '@/config/settings';
 
 const PORT = CONFIG.system.dataServerPort;
 

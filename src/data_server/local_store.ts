@@ -1,5 +1,17 @@
 import { FileSystem, CaseContextData, FileRegistryItem, findFileByFilename, upsertFile } from './utils';
-import { IDataStore } from '@/shared/interfaces';
+
+export interface IDataStore {
+    getCaseContext(caseId: string): Promise<CaseContextData>;
+    readCaseFile(caseId: string, filename: string): Promise<string>;
+    writeCaseFile(caseId: string, filename: string, content: string): Promise<void>;
+    appendCaseFile(caseId: string, filename: string, content: string): Promise<void>;
+    updateFileMetadata(caseId: string, filename: string, updates: Partial<FileRegistryItem>): Promise<void>;
+    deleteCaseFiles(caseId: string, pattern: string): Promise<string[]>;
+    getEvents(caseId: string, after?: number): Promise<any[]>;
+    postEvent(caseId: string, event: any): Promise<any>;
+    getReplies(caseId: string, after?: number): Promise<any[]>;
+    postReply(caseId: string, reply: any): Promise<any>;
+}
 
 /**
  * LocalDataStore - Local filesystem implementation of IDataStore

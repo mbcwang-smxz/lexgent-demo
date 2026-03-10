@@ -1,8 +1,13 @@
 import { Router, Request, Response } from 'express';
 import http from 'http';
 
-export function createProxyRoutes(agentUrl: string, dataUrl: string): Router {
+export function createProxyRoutes(agentUrl: string, dataUrl: string, yamlUrl: string): Router {
     const router = Router();
+
+    // Config endpoint - expose server URLs to frontend
+    router.get('/config', (_req, res) => {
+        res.json({ dataServerUrl: dataUrl, yamlServerUrl: yamlUrl });
+    });
 
     // --- Agent Engine proxies ---
 

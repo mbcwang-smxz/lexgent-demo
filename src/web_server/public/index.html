@@ -126,6 +126,8 @@ const API = '/api';
 let agentId = 'law_agent';
 let caseId = null;
 let sessionId = null;
+let DATA_SERVER_URL = '';
+let YAML_SERVER_URL = '';
 let sse = null;
 let busy = false;
 let currentAskId = null;
@@ -201,6 +203,11 @@ async function initSession() {
   addMsg('system', `Initializing case ${escHtml(caseNumber)}...`);
 
   try {
+    // Fetch server URLs from backend config
+    const cfgRes = await fetch(`${API}/config`);
+    const cfg = await cfgRes.json();
+    DATA_SERVER_URL = cfg.dataServerUrl;
+    YAML_SERVER_URL = cfg.yamlServerUrl;
     // Init case
     const initRes = await fetch(`${API}/cases/init`, {
       method: 'POST',
@@ -214,7 +221,7 @@ async function initSession() {
     const sessRes = await fetch(`${API}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseNumber, caseId, agentId })
+      body: JSON.stringify({ caseNumber, caseId, agentId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL })
     });
     const sessData = await sessRes.json();
     sessionId = sessData.sessionId;

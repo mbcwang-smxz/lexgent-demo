@@ -22,7 +22,7 @@ import { URL } from 'url';
 import path from 'path';
 import fs from 'fs-extra';
 import { parse as parseYaml } from 'yaml';
-import { CONFIG } from '@/shared/config/settings';
+import { CONFIG } from '@/config/settings';
 
 // Base directory for YAML configurations
 const YAML_BASE_DIR = path.join(CONFIG.system.dataDir, 'yaml');

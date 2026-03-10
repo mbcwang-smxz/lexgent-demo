@@ -1,14 +1,26 @@
 /// <reference path="../types/modules.d.ts" />
 import readline from 'readline';
-import { CONFIG } from '@/shared/config/settings';
-import { checkServerConnection } from '@/shared/utils/network';
-import { CaseStore } from '@/shared/utils/case_store';
+import { CONFIG } from '@/config/settings';
+import { CaseStore } from './case_store';
 import { parseArgs } from './args';
 import { TaskRunner, IActionHandler } from './runner';
 
-const AGENT_SERVER_URL = process.env.AGENT_SERVER_URL || `http://localhost:${CONFIG.system.agentServerPort}`;
-const DATA_SERVER_URL = process.env.DATA_SERVER_URL || CONFIG.system.dataServerUrl;
-const YAML_SERVER_URL = process.env.YAML_SERVER_URL || CONFIG.system.yamlServerUrl;
+const AGENT_SERVER_URL = CONFIG.system.agentServerUrl;
+const DATA_SERVER_URL = CONFIG.system.dataServerUrl;
+const YAML_SERVER_URL = CONFIG.system.yamlServerUrl;
+
+async function checkServerConnection(url: string, serverName: string): Promise<boolean> {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        await fetch(url, { method: 'GET', signal: controller.signal });
+        clearTimeout(timeoutId);
+        return true;
+    } catch (e: any) {
+        console.error(`\n❌ 无法连接到 ${serverName} (${url})`);
+        return false;
+    }
+}
 
 // --- CLI Helper functions for Interactive Mode ---
 
@@ -222,7 +234,7 @@ LexGent 客户端工具使用说明:
     // Create CaseStore for data access
     const caseStore = new CaseStore(caseId, DATA_SERVER_URL);
 
-    const runner = new TaskRunner(AGENT_SERVER_URL, cliHandler);
+    const runner = new TaskRunner(AGENT_SERVER_URL, cliHandler, { dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL });
     runner.setCaseStore(caseStore);
     const runOptions = {
         verbose: config.verbose,
@@ -250,7 +262,7 @@ LexGent 客户端工具使用说明:
                 const sessRes = await fetch(`${AGENT_SERVER_URL}/session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId })
+                    body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL })
                 });
                 const sess = await sessRes.json();
 
@@ -311,7 +323,7 @@ LexGent 客户端工具使用说明:
         const res = await fetch(`${AGENT_SERVER_URL}/session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, verbose: config.verbose, reuseSandbox: config.reuseSandbox })
+            body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, verbose: config.verbose, reuseSandbox: config.reuseSandbox })
         });
         const sess = await res.json();
         currentSessionId = sess.sessionId;

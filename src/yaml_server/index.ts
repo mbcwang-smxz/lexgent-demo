@@ -15,7 +15,7 @@ const PORT = CONFIG.system.yamlServerPort;
 console.log(`[YamlServer] Starting with args: ${process.argv.join(' ')}`);
 const server = http.createServer(handleRequest);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`YAML Server running on port ${PORT}`);
     console.log(`  GET  /agents                       - List all agents`);
     console.log(`  GET  /agents/:agentId              - Get agent configuration`);

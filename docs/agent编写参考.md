@@ -1010,7 +1010,128 @@ model_name: "gemini/gemini-3-pro-preview"
 
 ---
 
-## 12. 常见问题 (FAQ)
+## 12. 实战示例：文件格式转换技能
+
+本节以「文件格式转换」技能为例，展示如何创建一个**通过 LLM function calling 调用 REST API** 的技能。该技能将 PDF/Word 文件转换为 Markdown 格式。
+
+### 12.1 设计思路
+
+- **转换逻辑**由 Data Server 的 REST API 实现（`POST /cases/:caseId/file2md`），不需要 LLM 做实际转换
+- **LLM 的职责**是理解用户意图、从文件列表中选择目标文件、调用转换函数、汇报结果
+- 采用**单任务 + function calling** 模式
+
+### 12.2 函数定义
+
+**文件路径**: `data/yaml/law_agent/functions/f_文件转换.yaml`
+
+```yaml
+type: "function"
+id: "Func_文件转换"
+alias: "f04"
+calling_name: "file_to_markdown"
+name: "文件转换"
+description: "将PDF或Word文件转换为Markdown格式。支持 .pdf、.doc、.docx 文件。"
+
+# REST configuration
+endpoint: "/cases/{caseId}/file2md"
+method: "POST"
+
+# Function parameters for LLM
+parameters:
+  sourceFilename:
+    type: "string"
+    required: true
+    description: "源文件名，如 'xxx.pdf' 或 'xxx.docx'"
+  targetFilename:
+    type: "string"
+    required: true
+    description: "目标Markdown文件名，如 'xxx.md'"
+```
+
+> **注意**：`endpoint` 中的 `{caseId}` 会在运行时由框架自动替换为当前案件 ID。
+
+### 12.3 技能定义
+
+**文件路径**: `data/yaml/law_agent/skills/s_文件转换.yaml`
+
+```yaml
+type: "skill"
+id: "Skill_文件转换"
+alias: "s11"
+name: "文件格式转换"
+version: "2.0.0"
+description: |
+  将PDF或Word文件转换为Markdown格式。
+  支持 .pdf、.doc、.docx 文件转换为 .md 文件。
+
+inputs:
+  - name: "all_files"
+    type: "file_list"
+    description: "当前案件所有文件的元数据列表"
+    required: true
+
+task:
+  prompt_ref: "law_agent/prompts/p_文件转换"
+  functions:
+    - "Func_文件转换"
+  llm_config:
+    temperature: 0.1
+    max_turns: 10
+```
+
+**要点说明**：
+- `inputs` 使用 `type: "file_list"` 获取文件列表元数据（不加载文件内容），供 LLM 浏览可转换的文件
+- `max_turns: 10` 允许多轮函数调用，支持批量转换多个文件（每个文件一次调用）
+- 不定义 `on_result`，转换结果由 LLM 直接用自然语言汇报给用户（API 已在服务端完成文件保存）
+
+### 12.4 提示词模板
+
+**文件路径**: `data/yaml/law_agent/prompts/p_文件转换.hbs`
+
+```handlebars
+# Role
+你是一名文件格式转换助手。你的任务是将用户指定的PDF或Word文件转换为Markdown格式。
+
+# 当前案件文件列表
+{{formatFiles inputs.all_files}}
+
+# 用户指令
+{{instruction}}
+
+# Task
+请根据用户指令，从文件列表中找到需要转换的文件，使用 file_to_markdown 函数进行转换。
+
+规则：
+1. 仅支持转换 .pdf、.doc、.docx 格式的文件
+2. 目标文件名：将源文件扩展名替换为 .md（如 起诉状.pdf → 起诉状.md）
+3. 如果用户未指定具体文件，则将文件列表中所有可转换的文件逐一转换
+4. 每个文件单独调用一次 file_to_markdown 函数
+5. 转换完成后，向用户汇报转换结果
+
+# Output Format
+转换完成后，用自然语言汇报：
+- 成功转换了哪些文件
+- 如有失败，说明失败原因
+```
+
+### 12.5 关键设计模式
+
+此技能体现了一种常见的设计模式：**LLM 作为调度者，API 作为执行者**。
+
+```
+用户指令 → LLM 分析文件列表 → 选择目标文件 → 调用 file_to_markdown → 汇报结果
+                                    ↑                      ↓
+                              (可能多轮)            Data Server 执行转换
+```
+
+这种模式适用于：
+- 实际操作由外部 API 完成（LLM 不做重计算）
+- 需要 LLM 理解用户意图并做出选择
+- 可能需要批量操作（多轮 function calling）
+
+---
+
+## 13. 常见问题 (FAQ)
 
 **Q: YAML 格式注意事项？**
 A: YAML 严禁使用 Tab 键缩进，**必须使用空格**。建议使用 VS Code 等编辑器，它会自动处理缩进和语法高亮。

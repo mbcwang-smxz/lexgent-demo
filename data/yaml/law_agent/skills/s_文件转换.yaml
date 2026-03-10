@@ -1,0 +1,22 @@
+type: "skill"
+id: "Skill_文件转换"
+alias: "s11"
+name: "文件格式转换"
+version: "2.0.0"
+description: |
+  将PDF或Word文件转换为Markdown格式。
+  支持 .pdf、.doc、.docx 文件转换为 .md 文件。
+
+inputs:
+  - name: "all_files"
+    type: "file_list"
+    description: "当前案件所有文件的元数据列表"
+    required: true
+
+task:
+  prompt_ref: "law_agent/prompts/p_文件转换"
+  functions:
+    - "Func_文件转换"
+  llm_config:
+    temperature: 0.1
+    max_turns: 10

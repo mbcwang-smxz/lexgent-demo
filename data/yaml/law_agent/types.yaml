@@ -87,3 +87,9 @@ types:
     name: "裁判文书草稿"
     category: "derived"
     format: "markdown"
+
+  - id: "Markdown转换文档"
+    name: "Markdown转换文档"
+    category: "derived"
+    format: "markdown"
+    description: "由PDF或Word文件转换生成的Markdown文档。"

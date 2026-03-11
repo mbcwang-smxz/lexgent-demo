@@ -1,6 +1,8 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { URL } from 'url';
-import { FileSystem, findFileByFilename, upsertFile } from './utils';
+import fs from 'fs-extra';
+import path from 'path';
+import { FileSystem, findFileByFilename, upsertFile, getMaxRIndex, getMaxUIndex, getMaxXIndex } from './utils';
 
 const resumeMode = process.argv.includes('--resume');
 const fsUtils = new FileSystem(process.cwd(), resumeMode);
@@ -128,7 +130,7 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
                     id,
                     filename,
                     type: updates.type || 'unknown',
-                    path: updates.path || `/remote/${caseId}/${filename}`,
+                    path: updates.path || `${caseId}/${filename}`,
                     lastModified: updates.lastModified || new Date(),
                     ...updates
                 };
@@ -181,21 +183,70 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
 
             const classifications: Array<{ filename: string; type: string }> =
                 result?.classifications || [];
+            const conversions: Array<{ sourceFilename: string; targetFilename: string }> =
+                result?.conversions || [];
 
             const context = await fsUtils.loadMetadata(caseId);
+            let rIndex = getMaxRIndex(context.files) + 1;
+            let xIndex = getMaxXIndex(context.files) + 1;
+            let uIndex = getMaxUIndex(context.files) + 1;
 
-            for (const item of classifications) {
-                let file = findFileByFilename(context.files, item.filename);
-                if (file) {
-                    Object.assign(file, { type: item.type });
-                } else {
-                    console.warn(`[CaseServer] classification: file not found: ${item.filename}`);
+            // Handle conversions: mark source P## as "无关文档" (X##), register converted file as U##
+            for (const conv of conversions) {
+                const { sourceFilename, targetFilename } = conv;
+                const sourceFile = findFileByFilename(context.files, sourceFilename);
+                if (sourceFile) {
+                    const oldId = sourceFile.id;
+                    sourceFile.type = '无关文档';
+                    sourceFile.id = `X${String(xIndex++).padStart(2, '0')}`;
+                    console.log(`[CaseServer] conversion: ${sourceFilename} → [${oldId}→${sourceFile.id}] 无关文档`);
                 }
+                // Register target only if not already in metadata (auto-scan may have added it)
+                const existing = findFileByFilename(context.files, targetFilename);
+                if (existing) {
+                    // Already registered (e.g., by getCaseContext auto-scan); just ensure correct type
+                    existing.type = '未分类文档';
+                    existing.metadata = { ...(existing.metadata || {}), convertedFrom: sourceFilename };
+                    console.log(`[CaseServer] updated existing: ${targetFilename} → [${existing.id}] 未分类文档`);
+                } else {
+                    const fileId = `U${String(uIndex++).padStart(2, '0')}`;
+                    context.files = upsertFile(context.files, {
+                        id: fileId,
+                        filename: targetFilename,
+                        type: '未分类文档',
+                        path: `${caseId}/${targetFilename}`,
+                        lastModified: new Date(),
+                        metadata: { convertedFrom: sourceFilename }
+                    });
+                    console.log(`[CaseServer] registered: ${targetFilename} → [${fileId}] 未分类文档`);
+                }
+            }
+
+            // Handle classifications: rename U## based on classification result
+            for (const item of classifications) {
+                const file = findFileByFilename(context.files, item.filename);
+                if (!file) {
+                    console.warn(`[CaseServer] classification: file not found: ${item.filename}`);
+                    continue;
+                }
+                const oldId = file.id;
+                file.type = item.type;
+
+                // Rename U## IDs based on classification result
+                if (file.id.startsWith('U')) {
+                    if (item.type === '无关文档') {
+                        file.id = `X${String(xIndex++).padStart(2, '0')}`;
+                    } else if (item.type !== '未分类文档') {
+                        // Known content type → promote to R##
+                        file.id = `R${String(rIndex++).padStart(2, '0')}`;
+                    }
+                }
+                console.log(`[CaseServer] classified: ${item.filename} → [${oldId}→${file.id}] ${item.type}`);
             }
 
             await fsUtils.saveMetadata(caseId, context);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'ok', updated: classifications.length }));
+            res.end(JSON.stringify({ status: 'ok', conversions: conversions.length, classified: classifications.length }));
             return;
         }
 
@@ -252,6 +303,48 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
         }
 
         // ========== Tool APIs (example/mock implementations) ==========
+
+        // POST /cases/:caseId/file2md (Mock: uses case-102 .txt files as conversion fixtures)
+        // sourceFilename: e.g. "1.pdf" → reads data/case-data/case-102/1.txt as converted content
+        if (pathParts[0] === 'cases' && pathParts[2] === 'file2md' && req.method === 'POST') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const body = await getBody(req);
+            const { sourceFilename } = JSON.parse(body);
+
+            if (!sourceFilename) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Missing sourceFilename' }));
+                return;
+            }
+
+            // Derive base name and target filename automatically: "1.pdf" → "1" → "1.md"
+            const baseName = sourceFilename.replace(/\.[^.]+$/, '');
+            const targetFilename = `${baseName}.md`;
+            const mockFile = `${baseName}.txt`;
+
+            // Read fixture from source data directory (not runtime .runs/)
+            const fixturePath = path.join(process.cwd(), 'data', 'case-data', 'case-102', mockFile);
+            if (!await fs.pathExists(fixturePath)) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Mock fixture not found: data/case-data/case-102/${mockFile}` }));
+                return;
+            }
+            const content = await fs.readFile(fixturePath, 'utf-8');
+
+            // Save converted content to target case's runtime directory
+            await fsUtils.writeFile(caseId, targetFilename, content);
+
+            console.log(`[file2md mock] ${sourceFilename} → ${targetFilename} (${content.length} chars)`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                status: 'ok',
+                sourceFilename,
+                targetFilename,
+                size: content.length,
+                message: `成功将 ${sourceFilename} 转换为 ${targetFilename}`
+            }));
+            return;
+        }
 
         // POST /api/tools/echo
         if (pathParts[0] === 'api' && pathParts[1] === 'tools' && pathParts[2] === 'echo' && req.method === 'POST') {

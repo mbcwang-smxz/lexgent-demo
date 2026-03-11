@@ -2,26 +2,23 @@ type: "skill"
 id: "Skill_文档分类"
 alias: "s00"
 name: "案卷智能分类"
-version: "2.0.0"
+version: "5.0.0"
 description: |
-  读取未分类文档的内容，识别其真实的法律文书类型。
-  适用场景: 案件初始化，文件上传后自动分类。
-
-batch: true  # 支持批量处理多文件（模板使用 {{#each}}）
+  对案件中类型为"未分类文档"（U## 前缀）的文件进行智能分类。
+  基于文件名和内容预览判断法律文书类型，将 U## 升级为 R##（相关）或 X##（无关）。
+  此技能自动注入所有未分类文档，无需指定 inputs。
 
 inputs:
-  - name: "target_doc"
-    required: true
-    description: "待分类的文档（支持批量）"
+  - name: "unclassified_files"
+    system: "files_by_type"
+    filter: "未分类文档"
+    required: false
+    description: "类型为'未分类文档'的文件列表（自动注入，无需指定）"
 
 on_result:
   - type: "api_call"
     endpoint: "classification"
-    fields:
-      filename: "文件名"
-      type: "分类类型"
 
-# 统一使用 task 定义 LLM 调用
 task:
   prompt_ref: "law_agent/prompts/p_案件初始化.hbs"
   llm_config:

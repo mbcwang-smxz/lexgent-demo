@@ -14,8 +14,4 @@ parameters:
   sourceFilename:
     type: "string"
     required: true
-    description: "源文件名，如 'xxx.pdf' 或 'xxx.docx'"
-  targetFilename:
-    type: "string"
-    required: true
-    description: "目标Markdown文件名，如 'xxx.md'"
+    description: "源文件名，如 '1.pdf' 或 '起诉状.docx'"

@@ -56,6 +56,39 @@ export function getMaxRIndex(files: FileRegistryItem[]): number {
     return maxR;
 }
 
+export function getMaxPIndex(files: FileRegistryItem[]): number {
+    let maxP = 0;
+    for (const file of files) {
+        if (file.id.startsWith('P')) {
+            const num = parseInt(file.id.substring(1));
+            if (!isNaN(num) && num > maxP) maxP = num;
+        }
+    }
+    return maxP;
+}
+
+export function getMaxUIndex(files: FileRegistryItem[]): number {
+    let maxU = 0;
+    for (const file of files) {
+        if (file.id.startsWith('U')) {
+            const num = parseInt(file.id.substring(1));
+            if (!isNaN(num) && num > maxU) maxU = num;
+        }
+    }
+    return maxU;
+}
+
+export function getMaxXIndex(files: FileRegistryItem[]): number {
+    let maxX = 0;
+    for (const file of files) {
+        if (file.id.startsWith('X')) {
+            const num = parseInt(file.id.substring(1));
+            if (!isNaN(num) && num > maxX) maxX = num;
+        }
+    }
+    return maxX;
+}
+
 /**
  * Migrate files from old dict format to new array format.
  * Used for backward compatibility when loading old metadata.json files.
@@ -183,12 +216,12 @@ export class FileSystem {
             await fs.copy(path.join(sourceDir, file), path.join(caseDir, file));
         }
 
-        // 4. Update Metadata
-        const ctx = await this.loadMetadata(caseId);
+        // 4. Scan files and build metadata (registers P##/U##/D## from physical files)
+        const ctx = await this.getCaseContext(caseId);
         if (options?.caseNumber) {
             ctx.metadata.caseNumber = options.caseNumber;
+            await this.saveMetadata(caseId, ctx);
         }
-        await this.saveMetadata(caseId, ctx);
 
         return caseDir;
     }
@@ -285,8 +318,9 @@ export class FileSystem {
         const physicalFiles = await fs.readdir(caseDir);
         const now = Date.now();
 
-        // Find max R index for new files
-        let rIndex = getMaxRIndex(context.files) + 1;
+        // Find max indices for new file ID assignment
+        let pIndex = getMaxPIndex(context.files) + 1;
+        let uIndex = getMaxUIndex(context.files) + 1;
 
         // Sync physical files to registry
         const currentFilenames = new Set(physicalFiles);
@@ -309,17 +343,34 @@ export class FileSystem {
         context.files = filesToKeep;
 
         // 2. Add new files to registry
+        const SYSTEM_FILES = new Set(['metadata.json', 'llm_cache.json', 'case_file_list_metadata.txt', 'system_skills_metadata.txt']);
         for (const filename of physicalFiles) {
-            if (filename === 'metadata.json' || filename === 'llm_cache.json' || filename.endsWith('.jsonl')) continue;
+            if (SYSTEM_FILES.has(filename) || filename.endsWith('.jsonl') || filename.startsWith('sys_')) continue;
 
             const isRegistered = context.files.some(f => f.filename === filename);
             if (!isRegistered) {
-                const id = filename.startsWith('D') ? filename.split('_')[0] : `R${String(rIndex++).padStart(2, '0')}`;
+                const isPdfOrOffice = /\.(pdf|docx|doc)$/i.test(filename);
+                // D## for derived (AI-generated), P## for PDF/office, U## for unclassified text
+                let id: string;
+                let type: string;
+                if (filename.startsWith('D')) {
+                    // D## ID from filename prefix: "D01_当事人信息.json" → id="D01", type="当事人信息"
+                    const parts = filename.split('_');
+                    id = parts[0];
+                    const nameWithExt = parts.slice(1).join('_');
+                    type = nameWithExt.replace(/\.[^.]+$/, '') || '衍生文档';
+                } else if (isPdfOrOffice) {
+                    id = `P${String(pIndex++).padStart(2, '0')}`;
+                    type = '待转换文档';
+                } else {
+                    id = `U${String(uIndex++).padStart(2, '0')}`;
+                    type = '未分类文档';
+                }
                 context.files.push({
                     id,
-                    type: "未分类文档",
+                    type,
                     filename,
-                    path: this.resolveFilePath(caseId, filename), // IMPORTANT: resolves to sandbox path
+                    path: `${caseId}/${filename}`,
                     lastModified: (await fs.stat(this.resolveFilePath(caseId, filename))).mtime
                 });
             }

@@ -1,37 +1,57 @@
 type: "document_type"
 name: "法律文书类型注册表"
-version: "1.0.0"
+version: "2.0.0"
 
 types:
-  # ===== 原始文档 (Raw) =====
+  # ===== 原始文档 (Raw) — R## 前缀 =====
   - id: "民事起诉状"
     name: "民事起诉状"
     category: "raw"
-    format: "text"
     description: "原告提交的起诉状文书。"
 
   - id: "民事答辩状"
     name: "民事答辩状"
     category: "raw"
-    format: "text"
     description: "被告提交的答辩状文书。"
 
   - id: "证据目录"
     name: "证据目录"
     category: "raw"
-    format: "text"
+
+  - id: "证据材料"
+    name: "证据材料"
+    category: "raw"
+    description: "案件相关证据文件（照片、合同、票据等）。"
 
   - id: "庭审笔录"
     name: "庭审笔录"
     category: "raw"
-    format: "text"
 
   - id: "询问笔录"
     name: "询问笔录"
     category: "raw"
-    format: "text"
 
-  # ===== 衍生文档 (Derived) =====
+  - id: "民事判决书"
+    name: "民事判决书"
+    category: "raw"
+    description: "法院作出的民事裁判文书。"
+
+  - id: "民事调解书"
+    name: "民事调解书"
+    category: "raw"
+    description: "法院出具的调解协议确认文书。"
+
+  - id: "代理词"
+    name: "代理词"
+    category: "raw"
+    description: "律师在庭审中代理当事人发表的意见。"
+
+  - id: "其他"
+    name: "其他"
+    category: "raw"
+    description: "无法归入已知类型的文书，但与案件相关。"
+
+  # ===== 衍生文档 (Derived) — D## 前缀 =====
   - id: "当事人信息"
     name: "当事人信息"
     category: "derived"
@@ -88,8 +108,18 @@ types:
     category: "derived"
     format: "markdown"
 
-  - id: "Markdown转换文档"
-    name: "Markdown转换文档"
-    category: "derived"
-    format: "markdown"
-    description: "由PDF或Word文件转换生成的Markdown文档。"
+  # ===== 系统状态类型 (System State) =====
+  - id: "未分类文档"
+    name: "未分类文档"
+    category: "system"
+    description: "已上传或转换完成、但尚未完成内容分类的文档（ID前缀：U##）。"
+
+  - id: "待转换文档"
+    name: "待转换文档"
+    category: "system"
+    description: "PDF或Office格式文档，需先执行文件转换才能处理（ID前缀：P##）。"
+
+  - id: "无关文档"
+    name: "无关文档"
+    category: "system"
+    description: "经分类确认与案件无关的文档（ID前缀：X##）。"

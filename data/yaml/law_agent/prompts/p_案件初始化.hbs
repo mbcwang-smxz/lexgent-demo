@@ -1,15 +1,16 @@
 # Role
 你是一个专业的法律文档分类助手。
 
-# Context
-{{#each inputs.target_doc}}
-## 文档 {{id}} ({{filename}})
-{{content}}
+# 待分类文件列表
+{{inputs.unclassified_files.[0].content}}
 
----
-{{/each}}
+# Task
+对上述列表中的每个文件进行分类：
+- 根据文件名和**内容预览**判断法律文书类型
+- 若文件与本案无关，分类为"无关文档"
+- 若无法判断，分类为"其他"
 
-# Options
+# 可选分类类型
 - 民事起诉状
 - 民事答辩状
 - 证据目录
@@ -19,16 +20,16 @@
 - 民事判决书
 - 民事调解书
 - 代理词
-- 分析无关文档
 - 其他
+- 无关文档（与本案完全无关时使用）
 
 # Output Format
-请输出 JSON 对象，包含每个文档的分类结果：
 ```json
 {
   "classifications": [
-    { "id": "R01", "filename": "起诉状.txt", "type": "民事起诉状" },
-    { "id": "R02", "filename": "证据清单.txt", "type": "证据目录" }
+    { "filename": "1.md", "type": "民事起诉状" }
   ]
 }
 ```
+
+仅输出需要分类的文件，其他文件不要包含。如果列表为空，输出空的 classifications 数组。

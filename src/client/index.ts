@@ -357,26 +357,7 @@ LexGent 客户端工具使用说明:
     // Completion promise for waiting on skill execution
     let commandCompleteResolve: (() => void) | null = null;
 
-    // Auto-classification queue
-    const pendingSystemCommands: string[] = [];
     let inProgressLine = false;
-
-    const fetchAndCheckUnclassified = async (): Promise<boolean> => {
-        try {
-            const res = await fetch(`${DATA_SERVER_URL}/cases/${caseId}/context`);
-            if (!res.ok) return false;
-            const ctx = await res.json() as any;
-            return ctx?.files?.some((f: any) => f.type === '未分类文档') ?? false;
-        } catch { return false; }
-    };
-
-    const checkAndEnqueueClassification = async (): Promise<void> => {
-        if (pendingSystemCommands.some(c => c.includes('文档分类'))) return;
-        if (await fetchAndCheckUnclassified()) {
-            console.log('[System] 检测到未分类文档，已自动加入分类任务');
-            pendingSystemCommands.push('/Skill_文档分类');
-        }
-    };
 
     // Setup SSE listener with sequential event queue
     // EventSource fires callbacks synchronously — async handlers can overlap.
@@ -538,17 +519,6 @@ LexGent 客户端工具使用说明:
 
     // Main loop
     const prompt = () => {
-        // Process pending system commands first
-        if (pendingSystemCommands.length > 0) {
-            const cmd = pendingSystemCommands.shift()!;
-            console.log(`[System] 自动执行: ${cmd}`);
-            handleCommand(cmd).then(async () => {
-                await checkAndEnqueueClassification();
-                prompt();
-            });
-            return;
-        }
-
         rl.question('LexGent>', async (input) => {
             input = input.trim();
 
@@ -646,14 +616,12 @@ LexGent 客户端工具使用说明:
 
                 // Execute skill or tool
                 await handleCommand(input);
-                await checkAndEnqueueClassification();
                 prompt();
                 return;
             }
 
             // Regular text - send to Analyser via TaskRunner
             await runner.runTask(config.caseNumber, caseId, input, runOptions);
-            await checkAndEnqueueClassification();
             prompt();
         });
     };
@@ -665,8 +633,6 @@ LexGent 客户端工具使用说明:
         process.exit(0);
     });
 
-    // Start prompt loop - check for unclassified files on init
-    await checkAndEnqueueClassification();
     prompt();
 }
 

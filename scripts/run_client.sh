@@ -10,14 +10,20 @@ AGENT_URL="${AGENT_SERVER_URL:-http://localhost:3001}"
 DATA_URL="${DATA_SERVER_URL:-http://localhost:3000}"
 YAML_URL="${YAML_SERVER_URL:-http://localhost:3003}"
 
-# Helper: check if a URL is reachable
+# Helper: check if a URL is reachable (bypass proxy to avoid false positives)
 check_url() {
-    curl -so /dev/null --connect-timeout 2 "$1" 2>/dev/null
+    curl --noproxy '*' -so /dev/null --connect-timeout 2 "$1" 2>/dev/null
 }
 
-# Helper: check if a URL points to localhost
+# Helper: check if a URL points to this machine
 is_local() {
-    echo "$1" | grep -qE '(localhost|127\.0\.0\.1)'
+    local host
+    host=$(echo "$1" | sed -E 's|https?://([^:/]+).*|\1|')
+    # Check common local names
+    echo "$host" | grep -qE '^(localhost|127\.0\.0\.1)$' && return 0
+    # Check if host matches any local IP
+    ip -4 addr show 2>/dev/null | grep -qF "$host" && return 0
+    return 1
 }
 
 # --- Engine must be running first ---

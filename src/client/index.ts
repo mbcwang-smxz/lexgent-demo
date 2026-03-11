@@ -17,7 +17,8 @@ async function checkServerConnection(url: string, serverName: string): Promise<b
         clearTimeout(timeoutId);
         return true;
     } catch (e: any) {
-        console.error(`\n❌ 无法连接到 ${serverName} (${url})`);
+        const cause = e.cause ? ` (${e.cause.code || e.cause.message || e.cause})` : '';
+        console.error(`\n❌ 无法连接到 ${serverName} (${url}): ${e.message}${cause}`);
         return false;
     }
 }
@@ -33,30 +34,51 @@ async function askLocal(query: string, rl: readline.Interface): Promise<string |
 }
 
 async function fetchSkillMap(agentId: string): Promise<Record<string, { query: string, desc: string, alias?: string, params?: string }>> {
+    const url = `${AGENT_SERVER_URL}/agent/${agentId}/skills?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`;
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/skills?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
-        if (!res.ok) throw new Error(res.statusText);
-        return await res.json() as any;
+        console.log(`[debug] fetchSkillMap: GET ${url}`);
+        const res = await fetch(url);
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            throw new Error(`${res.status} ${res.statusText} - ${body}`);
+        }
+        const data = await res.json() as any;
+        console.log(`[debug] fetchSkillMap: got ${Object.keys(data).length} skills`);
+        return data;
     } catch (e: any) {
         throw new Error(`无法连接到 Agent Server (${AGENT_SERVER_URL}): ${e.message}`);
     }
 }
 
 async function fetchFunctionMap(agentId: string): Promise<Record<string, { desc: string; alias?: string; params?: string }>> {
+    const url = `${AGENT_SERVER_URL}/agent/${agentId}/functions?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`;
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/functions?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
-        if (!res.ok) throw new Error(res.statusText);
-        return await res.json() as any;
+        console.log(`[debug] fetchFunctionMap: GET ${url}`);
+        const res = await fetch(url);
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            throw new Error(`${res.status} ${res.statusText} - ${body}`);
+        }
+        const data = await res.json() as any;
+        console.log(`[debug] fetchFunctionMap: got ${Object.keys(data).length} functions`);
+        return data;
     } catch (e: any) {
         throw new Error(`无法连接到 Agent Server (${AGENT_SERVER_URL}): ${e.message}`);
     }
 }
 
 async function fetchTaskMap(agentId: string): Promise<Record<string, { desc: string; alias?: string; params?: string }>> {
+    const url = `${AGENT_SERVER_URL}/agent/${agentId}/tasks?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`;
     try {
-        const res = await fetch(`${AGENT_SERVER_URL}/agent/${agentId}/tasks?yamlServerUrl=${encodeURIComponent(YAML_SERVER_URL)}`);
-        if (!res.ok) throw new Error(res.statusText);
-        return await res.json() as any;
+        console.log(`[debug] fetchTaskMap: GET ${url}`);
+        const res = await fetch(url);
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            throw new Error(`${res.status} ${res.statusText} - ${body}`);
+        }
+        const data = await res.json() as any;
+        console.log(`[debug] fetchTaskMap: got ${Object.keys(data).length} tasks`);
+        return data;
     } catch (e: any) {
         throw new Error(`无法连接到 Agent Server (${AGENT_SERVER_URL}): ${e.message}`);
     }
@@ -549,11 +571,11 @@ LexGent 客户端工具使用说明:
                     try {
                         const funcMap = await fetchFunctionMap(agentId);
                         displayFunctionList(funcMap);
-                    } catch (e: any) { /* ignore */ }
+                    } catch (e: any) { console.error(`[debug] fetchFunctionMap error: ${e.message}`); }
                     try {
                         const taskMap = await fetchTaskMap(agentId);
                         displayTaskList(taskMap);
-                    } catch (e: any) { /* ignore */ }
+                    } catch (e: any) { console.error(`[debug] fetchTaskMap error: ${e.message}`); }
                     prompt();
                     return;
                 }

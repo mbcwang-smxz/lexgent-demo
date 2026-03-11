@@ -26,4 +26,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Web Server:    http://0.0.0.0:${PORT}`);
     console.log(`Agent Engine:  ${AGENT_SERVER_URL}`);
     console.log(`Data Server:   ${DATA_SERVER_URL}`);
+    console.log(`YAML Server:   ${YAML_SERVER_URL}`);
 });

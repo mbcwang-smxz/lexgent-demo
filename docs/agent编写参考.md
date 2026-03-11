@@ -63,25 +63,25 @@ version: "2.0.0"
 description: "辅助处理民事案件分析与文书起草。" # 描述
 
 # 模型名（格式: "{提供者}/{模型}"，详见「运行时配置」章节）
-model_name: "gemini_comp/gemini-3-flash-preview"
+model_name: "deepseek/deepseek-chat"
 
 # 核心：技能清单（支持通配符）
 skills:
-  - "law_agent/skills/s*"     # 匹配所有 s_ 开头的技能
+  - "law_agent/skills/s*.yaml"   # 匹配所有 s_ 开头的技能
 
 # 独立任务列表（可选，支持通配符）
 tasks:
-  - "law_agent/tasks/*"
+  - "law_agent/tasks/t*.yaml"
 
-# 引用文档类型定义
-document_types: "law_agent/types"
+# 引用文档类型定义（需包含 .yaml 扩展名）
+document_types: "law_agent/types.yaml"
 
 # 函数列表（可选，支持通配符）
 functions:
-  - "law_agent/functions/f*"
+  - "law_agent/functions/f*.yaml"
 
 # Agent 级分析器提示词（可选，覆盖框架默认 system_prompt）
-analyser_prompt: "law_agent/prompts/p_analyser"
+analyser_prompt: "law_agent/prompts/p_analyser.hbs"
 
 # 默认运行时配置 ID（对应 configs/dev.yaml）
 default_config: "dev"
@@ -129,6 +129,23 @@ inputs:
   - name: "source_docs"     # 变量名，将在 Prompt 中通过 {{inputs.source_docs}} 引用
     required: true          # 是否必须
     description: "起诉状或初始立案材料。"
+
+# --- 系统自动注入输入（System Inputs）---
+# 通过 system 字段标记后，框架在执行前自动填充，Analyser 无需在 inputs 中指定文件 ID。
+# 支持以下 system 类型：
+#
+# system: "file_list"        — 注入所有案件文件清单（含内容预览）
+# system: "files_by_type"    — 按 type 过滤注入，需配合 filter 字段
+#   filter: "待转换文档"      → 仅注入 P## 系列文件
+#   filter: "未分类文档"      → 仅注入 U## 系列文件
+# system: "skill_list"       — 注入当前 Agent 所有技能信息
+#
+# 示例（自动注入待转换文档，Analyser 无需指定 inputs）：
+# inputs:
+#   - name: "pending_files"
+#     system: "files_by_type"
+#     filter: "待转换文档"
+#     required: false
 
 # ======= 2. 任务定义 (Task) =======
 # 定义具体的执行逻辑
@@ -341,22 +358,20 @@ inputs:
 ```yaml
 type: "document_type"
 name: "法律文书类型注册表"
-version: "1.0.0"
+version: "2.0.0"
 
 types:
-  # ===== 原始文档 (Raw) — 用户上传的材料 =====
+  # ===== 原始文档 (Raw) — R## 前缀，经分类后的案件文书 =====
   - id: "民事起诉状"
     name: "民事起诉状"
-    category: "raw"           # 原始文件
-    format: "text"
+    category: "raw"           # 原始文件（无 format 限制，支持 .txt/.md 等）
     description: "原告提交的起诉状文书。"
 
   - id: "庭审笔录"
     name: "庭审笔录"
     category: "raw"
-    format: "text"
 
-  # ===== 衍生文档 (Derived) — AI 技能生成的结果 =====
+  # ===== 衍生文档 (Derived) — D## 前缀，AI 技能生成的结果 =====
   - id: "当事人信息"
     name: "当事人信息"
     category: "derived"       # AI 生成
@@ -367,6 +382,22 @@ types:
     name: "裁判文书草稿"
     category: "derived"
     format: "markdown"
+
+  # ===== 系统状态类型 (System) — 文件处理生命周期状态 =====
+  - id: "待转换文档"
+    name: "待转换文档"
+    category: "system"        # P## 前缀，PDF/Office 原件，需先转换
+    description: "PDF或Office格式文档，需执行文件转换后才能处理。"
+
+  - id: "未分类文档"
+    name: "未分类文档"
+    category: "system"        # U## 前缀，转换后尚未分类
+    description: "已转换完成、但尚未完成内容分类的文档。"
+
+  - id: "无关文档"
+    name: "无关文档"
+    category: "system"        # X## 前缀，经确认与案件无关
+    description: "经分类确认与案件无关的文档。"
 ```
 
 ### 7.3 字段说明
@@ -375,8 +406,8 @@ types:
 | :--- | :--- | :--- |
 | `id` | 是 | 类型唯一标识符。技能在 `on_result` 中通过 `type_ref` 引用此 ID |
 | `name` | 是 | 显示名称 |
-| `category` | 是 | `"raw"`（用户上传）或 `"derived"`（AI 生成） |
-| `format` | 否 | 文件格式：`text`、`json`、`markdown`、`pdf` |
+| `category` | 是 | `"raw"`（已分类原始文书，R## 前缀）、`"derived"`（AI 生成，D## 前缀）、`"system"`（处理状态，P##/U##/X## 前缀） |
+| `format` | 否 | 文件格式：`text`、`json`、`markdown`、`pdf`（可选，不限制实际格式） |
 | `description` | 否 | 类型描述 |
 
 ### 7.4 与 `on_result` 的关系
@@ -1010,17 +1041,47 @@ model_name: "gemini/gemini-3-pro-preview"
 
 ---
 
-## 12. 实战示例：文件格式转换技能
+## 12. 实战示例：PDF 文件处理流水线
 
-本节以「文件格式转换」技能为例，展示如何创建一个**通过 LLM function calling 调用 REST API** 的技能。该技能将 PDF/Word 文件转换为 Markdown 格式。
+本节展示完整的 PDF 处理流程：**文件转换 → 文档分类**，以及这两个技能使用的 `system: "files_by_type"` 输入注入模式。
 
-### 12.1 设计思路
+### 12.1 文件 ID 生命周期
 
-- **转换逻辑**由 Data Server 的 REST API 实现（`POST /cases/:caseId/file2md`），不需要 LLM 做实际转换
-- **LLM 的职责**是理解用户意图、从文件列表中选择目标文件、调用转换函数、汇报结果
-- 采用**单任务 + function calling** 模式
+案件文件按处理阶段自动分配 ID 前缀：
 
-### 12.2 函数定义
+| 阶段 | ID 前缀 | 类型 | 说明 |
+| :--- | :--- | :--- | :--- |
+| 初始扫描 | `P##` | 待转换文档 | PDF/Office 原始文件 |
+| 转换后（原件） | `X##` | 无关文档 | 已转换的原件，自动标记为无关 |
+| 转换后（结果） | `U##` | 未分类文档 | 生成的 .md 文件，待分类 |
+| 分类后（相关） | `R##` | 民事起诉状等 | 已确认与案件相关的文书 |
+| 分类后（无关） | `X##` | 无关文档 | 分类确认无关的文档 |
+| AI 生成 | `D##` | 当事人信息等 | 技能产出的衍生文件 |
+
+完整流程：
+```
+初始化案件 → P01~P05（待转换）
+     ↓ Skill_文件转换
+P01→X01，生成 U01（1.md 未分类）
+     ↓ Skill_文档分类
+U01→R01（民事起诉状）
+```
+
+### 12.2 `system: "files_by_type"` 输入注入
+
+这两个技能都使用 `system: "files_by_type"` 模式——框架在执行前自动从 metadata.json 中过滤指定类型的文件，注入为模板变量。Analyser 在规划时 **inputs 留空**，不需要指定具体文件 ID。
+
+```yaml
+# 工作原理：
+# 1. Analyser 生成计划：{"skill_id": "Skill_文件转换", "inputs": []}
+# 2. 框架执行前：过滤 metadata.json 中 type="待转换文档" 的文件
+# 3. 写入临时文件 sys_pending_files.txt，注入为 inputs.pending_files
+# 4. Prompt 通过 {{inputs.pending_files.[0].content}} 访问文件列表
+```
+
+### 12.3 文件转换技能
+
+#### 函数定义
 
 **文件路径**: `data/yaml/law_agent/functions/f_文件转换.yaml`
 
@@ -1032,25 +1093,18 @@ calling_name: "file_to_markdown"
 name: "文件转换"
 description: "将PDF或Word文件转换为Markdown格式。支持 .pdf、.doc、.docx 文件。"
 
-# REST configuration
-endpoint: "/cases/{caseId}/file2md"
+endpoint: "/cases/{caseId}/file2md"   # {caseId} 由框架自动替换
 method: "POST"
 
-# Function parameters for LLM
 parameters:
   sourceFilename:
     type: "string"
     required: true
-    description: "源文件名，如 'xxx.pdf' 或 'xxx.docx'"
-  targetFilename:
-    type: "string"
-    required: true
-    description: "目标Markdown文件名，如 'xxx.md'"
+    description: "源文件名，如 '1.pdf' 或 '起诉状.docx'"
+# targetFilename 由 Data Server 自动推导（去掉扩展名加 .md），无需 LLM 指定
 ```
 
-> **注意**：`endpoint` 中的 `{caseId}` 会在运行时由框架自动替换为当前案件 ID。
-
-### 12.3 技能定义
+#### 技能定义
 
 **文件路径**: `data/yaml/law_agent/skills/s_文件转换.yaml`
 
@@ -1059,19 +1113,24 @@ type: "skill"
 id: "Skill_文件转换"
 alias: "s11"
 name: "文件格式转换"
-version: "2.0.0"
+version: "3.0.0"
 description: |
-  将PDF或Word文件转换为Markdown格式。
-  支持 .pdf、.doc、.docx 文件转换为 .md 文件。
+  将PDF或Word文件（P## 系列）转换为Markdown格式。
+  转换后的文件注册为 U## 未分类文档，等待后续分类。
+  此技能自动注入所有待转换文档，无需指定 inputs。
 
 inputs:
-  - name: "all_files"
-    type: "file_list"
-    description: "当前案件所有文件的元数据列表"
-    required: true
+  - name: "pending_files"
+    system: "files_by_type"     # 框架自动注入，Analyser inputs 留空
+    filter: "待转换文档"         # 只注入 P## 系列文件
+    required: false
+
+on_result:
+  - type: "api_call"
+    endpoint: "classification"  # 转换完成后通知 Data Server 更新 metadata
 
 task:
-  prompt_ref: "law_agent/prompts/p_文件转换"
+  prompt_ref: "law_agent/prompts/p_文件转换.hbs"
   functions:
     - "Func_文件转换"
   llm_config:
@@ -1079,55 +1138,90 @@ task:
     max_turns: 10
 ```
 
-**要点说明**：
-- `inputs` 使用 `type: "file_list"` 获取文件列表元数据（不加载文件内容），供 LLM 浏览可转换的文件
-- `max_turns: 10` 允许多轮函数调用，支持批量转换多个文件（每个文件一次调用）
-- 不定义 `on_result`，转换结果由 LLM 直接用自然语言汇报给用户（API 已在服务端完成文件保存）
-
-### 12.4 提示词模板
+#### 提示词模板
 
 **文件路径**: `data/yaml/law_agent/prompts/p_文件转换.hbs`
 
 ```handlebars
 # Role
-你是一名文件格式转换助手。你的任务是将用户指定的PDF或Word文件转换为Markdown格式。
+你是一名文件格式转换助手。
 
-# 当前案件文件列表
-{{formatFiles inputs.all_files}}
-
-# 用户指令
-{{instruction}}
+# 待转换文件列表
+{{inputs.pending_files.[0].content}}
 
 # Task
-请根据用户指令，从文件列表中找到需要转换的文件，使用 file_to_markdown 函数进行转换。
-
-规则：
-1. 仅支持转换 .pdf、.doc、.docx 格式的文件
-2. 目标文件名：将源文件扩展名替换为 .md（如 起诉状.pdf → 起诉状.md）
-3. 如果用户未指定具体文件，则将文件列表中所有可转换的文件逐一转换
-4. 每个文件单独调用一次 file_to_markdown 函数
-5. 转换完成后，向用户汇报转换结果
+对上述列表中的每个文件，调用 file_to_markdown 函数进行转换（每个文件单独调用一次）。
 
 # Output Format
-转换完成后，用自然语言汇报：
-- 成功转换了哪些文件
-- 如有失败，说明失败原因
+所有文件转换完成后，输出 JSON 结果：
+```json
+{
+  "conversions": [
+    {"sourceFilename": "1.pdf", "targetFilename": "1.md"}
+  ]
+}
+```
+其中 targetFilename 为 API 返回的 targetFilename 字段值。如果没有文件需要转换，输出空数组。
 ```
 
-### 12.5 关键设计模式
+**要点**：
+- `on_result: api_call: classification` 将 `{"conversions": [...]}` 发送给 Data Server，后者负责更新 metadata（P##→X##，注册新 U##）
+- `targetFilename` 由 Data Server 自动推导，LLM 只需传 `sourceFilename`
 
-此技能体现了一种常见的设计模式：**LLM 作为调度者，API 作为执行者**。
+### 12.4 文档分类技能
+
+**文件路径**: `data/yaml/law_agent/skills/s_文档分类.yaml`
+
+```yaml
+type: "skill"
+id: "Skill_文档分类"
+alias: "s00"
+name: "案卷智能分类"
+version: "5.0.0"
+description: |
+  对案件中类型为"未分类文档"（U## 前缀）的文件进行智能分类。
+  将 U## 升级为 R##（相关）或 X##（无关）。
+  此技能自动注入所有未分类文档，无需指定 inputs。
+
+inputs:
+  - name: "unclassified_files"
+    system: "files_by_type"
+    filter: "未分类文档"         # 只注入 U## 系列文件（含内容预览）
+    required: false
+
+on_result:
+  - type: "api_call"
+    endpoint: "classification"  # 分类完成后通知 Data Server 重命名 ID
+
+task:
+  prompt_ref: "law_agent/prompts/p_案件初始化.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 1024
+```
+
+**提示词模板**（`p_案件初始化.hbs`）读取 `{{inputs.unclassified_files.[0].content}}`，内容包含文件名、类型和内容预览，输出：
+
+```json
+{
+  "classifications": [
+    { "filename": "1.md", "type": "民事起诉状" }
+  ]
+}
+```
+
+### 12.5 Analyser 规划规则
+
+`p_analyser.hbs` 中定义了前置处理规则，Analyser 会自动识别文件状态并规划执行顺序：
 
 ```
-用户指令 → LLM 分析文件列表 → 选择目标文件 → 调用 file_to_markdown → 汇报结果
-                                    ↑                      ↓
-                              (可能多轮)            Data Server 执行转换
+存在 P##（待转换文档）→ 先执行 Skill_文件转换(inputs:[])
+存在 U##（未分类文档）→ 先执行 Skill_文档分类(inputs:[])
+两者都有时的典型顺序：
+  Skill_文件转换(inputs:[]) → Skill_文档分类(inputs:[]) → [后续分析技能]
 ```
 
-这种模式适用于：
-- 实际操作由外部 API 完成（LLM 不做重计算）
-- 需要 LLM 理解用户意图并做出选择
-- 可能需要批量操作（多轮 function calling）
+> **注意**：使用 `system: "files_by_type"` 的技能，Analyser 在生成计划时 **inputs 必须留空 `[]`**，框架会自动注入数据。
 
 ---
 

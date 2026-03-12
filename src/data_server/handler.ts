@@ -2,7 +2,7 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { URL } from 'url';
 import fs from 'fs-extra';
 import path from 'path';
-import { FileSystem, findFileByFilename, upsertFile, getMaxRIndex, getMaxUIndex, getMaxXIndex } from './utils';
+import { FileSystem, findFileByFilename, upsertFile } from './utils';
 
 const resumeMode = process.argv.includes('--resume');
 const fsUtils = new FileSystem(process.cwd(), resumeMode);
@@ -20,7 +20,7 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     console.log(`[${new Date().toISOString()}] ${req.method} ${decodedUrl}`);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Data-Root');
 
     if (req.method === 'OPTIONS') {
@@ -110,6 +110,62 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
             return;
         }
 
+        // GET /cases/:caseId/metadata — return raw metadata (no auto-sync)
+        if (pathParts[0] === 'cases' && pathParts[2] === 'metadata' && !pathParts[3] && req.method === 'GET') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const metadata = await fsUtils.loadMetadata(caseId);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(metadata));
+            return;
+        }
+
+        // PUT /cases/:caseId/metadata — full replacement
+        if (pathParts[0] === 'cases' && pathParts[2] === 'metadata' && !pathParts[3] && req.method === 'PUT') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const body = await getBody(req);
+            const newMetadata = JSON.parse(body);
+            // Ensure caseId is consistent
+            newMetadata.caseId = caseId;
+            await fsUtils.saveMetadata(caseId, newMetadata);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+            return;
+        }
+
+        // GET /cases/:caseId/files/scan — list physical files with optional content preview
+        if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[3] === 'scan' && req.method === 'GET') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const caseDir = fsUtils.resolveCaseDir(caseId);
+            if (!await fs.pathExists(caseDir)) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ files: [] }));
+                return;
+            }
+            const preview = url.searchParams.get('preview') === 'true';
+            const allFiles = await fs.readdir(caseDir);
+            const SYSTEM_FILES = new Set(['metadata.json', 'llm_cache.json', 'case_file_list_metadata.txt', 'system_skills_metadata.txt']);
+            const files: Array<{ filename: string; size: number; lastModified: string; preview?: string }> = [];
+            for (const filename of allFiles) {
+                if (SYSTEM_FILES.has(filename) || filename.endsWith('.jsonl') || filename.startsWith('sys_')) continue;
+                const filePath = path.join(caseDir, filename);
+                const stat = await fs.stat(filePath);
+                const entry: { filename: string; size: number; lastModified: string; preview?: string } = {
+                    filename, size: stat.size, lastModified: stat.mtime.toISOString()
+                };
+                // Include content preview for non-binary text files
+                if (preview && !filename.match(/\.(pdf|docx|doc|png|jpg|jpeg|gif)$/i)) {
+                    try {
+                        const content = await fs.readFile(filePath, 'utf-8');
+                        entry.preview = content.replace(/\s+/g, ' ').trim().substring(0, 300);
+                    } catch { /* skip unreadable files */ }
+                }
+                files.push(entry);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ caseId, files }));
+            return;
+        }
+
         // PATCH /cases/:caseId/files/:filename/metadata (upsert - create or update)
         if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[4] === 'metadata' && req.method === 'PATCH') {
             const caseId = decodeURIComponent(pathParts[1]);
@@ -172,81 +228,6 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
             const deleted = await fsUtils.deleteFiles(caseId, pattern);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ deleted }));
-            return;
-        }
-
-        // POST /cases/:caseId/classification
-        if (pathParts[0] === 'cases' && pathParts[2] === 'classification' && req.method === 'POST') {
-            const caseId = decodeURIComponent(pathParts[1]);
-            const body = await getBody(req);
-            const { result } = JSON.parse(body);
-
-            const classifications: Array<{ filename: string; type: string }> =
-                result?.classifications || [];
-            const conversions: Array<{ sourceFilename: string; targetFilename: string }> =
-                result?.conversions || [];
-
-            const context = await fsUtils.loadMetadata(caseId);
-            let rIndex = getMaxRIndex(context.files) + 1;
-            let xIndex = getMaxXIndex(context.files) + 1;
-            let uIndex = getMaxUIndex(context.files) + 1;
-
-            // Handle conversions: mark source P## as "无关文档" (X##), register converted file as U##
-            for (const conv of conversions) {
-                const { sourceFilename, targetFilename } = conv;
-                const sourceFile = findFileByFilename(context.files, sourceFilename);
-                if (sourceFile) {
-                    const oldId = sourceFile.id;
-                    sourceFile.type = '无关文档';
-                    sourceFile.id = `X${String(xIndex++).padStart(2, '0')}`;
-                    console.log(`[CaseServer] conversion: ${sourceFilename} → [${oldId}→${sourceFile.id}] 无关文档`);
-                }
-                // Register target only if not already in metadata (auto-scan may have added it)
-                const existing = findFileByFilename(context.files, targetFilename);
-                if (existing) {
-                    // Already registered (e.g., by getCaseContext auto-scan); just ensure correct type
-                    existing.type = '未分类文档';
-                    existing.metadata = { ...(existing.metadata || {}), convertedFrom: sourceFilename };
-                    console.log(`[CaseServer] updated existing: ${targetFilename} → [${existing.id}] 未分类文档`);
-                } else {
-                    const fileId = `U${String(uIndex++).padStart(2, '0')}`;
-                    context.files = upsertFile(context.files, {
-                        id: fileId,
-                        filename: targetFilename,
-                        type: '未分类文档',
-                        path: `${caseId}/${targetFilename}`,
-                        lastModified: new Date(),
-                        metadata: { convertedFrom: sourceFilename }
-                    });
-                    console.log(`[CaseServer] registered: ${targetFilename} → [${fileId}] 未分类文档`);
-                }
-            }
-
-            // Handle classifications: rename U## based on classification result
-            for (const item of classifications) {
-                const file = findFileByFilename(context.files, item.filename);
-                if (!file) {
-                    console.warn(`[CaseServer] classification: file not found: ${item.filename}`);
-                    continue;
-                }
-                const oldId = file.id;
-                file.type = item.type;
-
-                // Rename U## IDs based on classification result
-                if (file.id.startsWith('U')) {
-                    if (item.type === '无关文档') {
-                        file.id = `X${String(xIndex++).padStart(2, '0')}`;
-                    } else if (item.type !== '未分类文档') {
-                        // Known content type → promote to R##
-                        file.id = `R${String(rIndex++).padStart(2, '0')}`;
-                    }
-                }
-                console.log(`[CaseServer] classified: ${item.filename} → [${oldId}→${file.id}] ${item.type}`);
-            }
-
-            await fsUtils.saveMetadata(caseId, context);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'ok', conversions: conversions.length, classified: classifications.length }));
             return;
         }
 

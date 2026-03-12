@@ -18,15 +18,13 @@ functions:
 
 analyser_prompt: 'law_agent/prompts/p_analyser.hbs'
 
-default_config: 'dev'
+init_skill: 'law_agent/skills/s_初始化.yaml'
+
+default_config: 'law_agent/configs/dev.yaml'
 
 context_prop:
     key: 'caseId'
     path: '/cases/{caseId}/context'
-
-metadata:
-    domain: '法律'
-    sub_domain: '民事诉讼'
 
 settings:
     timeout: 60000

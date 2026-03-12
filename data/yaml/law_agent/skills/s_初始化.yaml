@@ -1,0 +1,95 @@
+type: "skill"
+id: "Skill_初始化"
+alias: "s_init"
+name: "案件初始化"
+version: "1.0.0"
+description: |
+  自动初始化案件环境。同步物理文件到metadata，转换PDF/Office文件，分类未分类文档。
+  由 init_skill 自动触发，无需手动调用。
+
+inputs: []
+
+execution_type: "tasks"
+
+tasks:
+  # Phase 1: Load current state
+  - id: t_load_metadata
+    type: api_request
+    method: GET
+    endpoint: "/cases/{caseId}/metadata"
+    outputs:
+      - id: metadata
+
+  - id: t_scan_files
+    type: api_request
+    method: GET
+    endpoint: "/cases/{caseId}/files/scan?preview=true"
+    outputs:
+      - id: scan
+
+  # Phase 2: Sync new files + convert PDF/Office files
+  # Agentic LLM: analyzes metadata vs scan, registers new files, calls file conversion
+  - id: t_sync_and_convert
+    type: llm
+    prompt_ref: "law_agent/prompts/p_init_sync.hbs"
+    functions:
+      - "Func_文件转换"
+    inputs:
+      - name: metadata
+        ref: tasks.t_load_metadata.metadata
+      - name: scan
+        ref: tasks.t_scan_files.scan
+    outputs:
+      - id: updated_metadata
+    llm_config:
+      temperature: 0.1
+      max_tokens: 4096
+      max_turns: 10
+
+  # Phase 3: Save metadata after sync + conversion
+  - id: t_save_sync
+    type: api_request
+    method: PUT
+    endpoint: "/cases/{caseId}/metadata"
+    inputs:
+      - name: body
+        ref: tasks.t_sync_and_convert.updated_metadata
+
+  # Phase 4: Reload metadata + scan with previews for classification
+  - id: t_reload_metadata
+    type: api_request
+    method: GET
+    endpoint: "/cases/{caseId}/metadata"
+    outputs:
+      - id: current_metadata
+
+  - id: t_rescan_files
+    type: api_request
+    method: GET
+    endpoint: "/cases/{caseId}/files/scan?preview=true"
+    outputs:
+      - id: current_scan
+
+  # Phase 5: Classify unclassified files (U##)
+  - id: t_classify
+    type: llm
+    prompt_ref: "law_agent/prompts/p_init_classify.hbs"
+    inputs:
+      - name: metadata
+        ref: tasks.t_reload_metadata.current_metadata
+      - name: scan
+        ref: tasks.t_rescan_files.current_scan
+    outputs:
+      - id: classified_metadata
+    llm_config:
+      temperature: 0.1
+      max_tokens: 4096
+
+  # Phase 6: Save final metadata
+  - id: t_save_final
+    type: api_request
+    method: PUT
+    endpoint: "/cases/{caseId}/metadata"
+    inputs:
+      - name: body
+        ref: tasks.t_classify.classified_metadata

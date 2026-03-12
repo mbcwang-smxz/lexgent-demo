@@ -2,9 +2,9 @@ type: "skill"
 id: "Skill_响应综合"
 alias: "s16"
 name: "综合响应生成"
-version: "2.0.0"
+version: "2.1.0"
 description: |
-  将已生成的分析文档综合为面向用户的自然语言回复。
+  将已生成的分析文档综合为面向用户的自然语言回复，直接显示给用户。
   适用场景:
     - 用户询问案件概况、需要综合性介绍时
     - 执行完一系列分析技能后，需要向用户呈现结果时
@@ -12,8 +12,8 @@ description: |
 
   【重要】使用规则：
     1. 用户意图为"了解"、"介绍"、"说明"、"总结"等信息获取类请求时使用
-    2. 此技能生成 _response.md 文件，需配合 Skill_显示文档 显示给用户
-    3. 典型计划: [...分析技能...] → Skill_响应综合 → Skill_显示文档
+    2. 此技能直接将综合回复显示给用户，无需配合 Skill_显示文档
+    3. 典型计划: [...分析技能...] → Skill_响应综合
     4. instruction 字段应包含用户的原始意图
 
 inputs:
@@ -21,9 +21,20 @@ inputs:
     required: true
     description: "需要综合的分析文档（由前置步骤生成的 D01、D02 等）"
 
+execution_type: "tasks"
+
 tasks:
   - id: "综合生成"
     prompt_ref: "law_agent/prompts/p_响应综合.hbs"
+    outputs:
+      - id: response
     llm_config:
       temperature: 0.3
       max_tokens: 2048
+
+  - id: "显示"
+    type: "client"
+    action: "display_content"
+    inputs:
+      - name: content
+        ref: tasks.综合生成.response

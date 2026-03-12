@@ -18,18 +18,27 @@
             "method": "GET",
             "path": "/agent/:agentId/skills",
             "description": "List available skills for an agent",
+            "query": {
+                "yamlServerUrl": { "type": "string", "required": false, "description": "YAML Server endpoint, falls back to env/default" }
+            },
             "response": "{ [skillId]: { query, desc, alias?, params? } }"
         },
         {
             "method": "GET",
             "path": "/agent/:agentId/functions",
             "description": "List available functions for an agent",
+            "query": {
+                "yamlServerUrl": { "type": "string", "required": false, "description": "YAML Server endpoint, falls back to env/default" }
+            },
             "response": "{ [funcId]: { desc, alias?, params? } }"
         },
         {
             "method": "GET",
             "path": "/agent/:agentId/tasks",
             "description": "List available tasks for an agent",
+            "query": {
+                "yamlServerUrl": { "type": "string", "required": false, "description": "YAML Server endpoint, falls back to env/default" }
+            },
             "response": "{ [taskId]: { desc, alias?, params? } }"
         },
         {
@@ -42,32 +51,12 @@
             "path": "/agent/:agentId/run",
             "description": "Direct task execution (non-session mode)",
             "body": {
-                "caseId": {
-                    "type": "string",
-                    "required": true
-                },
-                "query": {
-                    "type": "string",
-                    "required": true
-                },
-                "verbose": {
-                    "type": "boolean",
-                    "required": false
-                },
-                "reuseSandbox": {
-                    "type": "boolean",
-                    "required": false
-                },
-                "sessionBase": {
-                    "type": "number",
-                    "required": false,
-                    "description": "Timestamp to filter chat history"
-                },
-                "sessionId": {
-                    "type": "string",
-                    "required": false,
-                    "description": "Session ID for SSE streaming"
-                }
+                "caseId": { "type": "string", "required": true },
+                "query": { "type": "string", "required": true },
+                "verbose": { "type": "boolean", "required": false },
+                "reuseSandbox": { "type": "boolean", "required": false },
+                "sessionBase": { "type": "number", "required": false, "description": "Timestamp to filter chat history" },
+                "sessionId": { "type": "string", "required": false, "description": "Session ID for SSE streaming" }
             },
             "response": "{ status: \"started\", caseId, taskId }"
         },
@@ -76,23 +65,10 @@
             "path": "/agent/:agentId/execute_command",
             "description": "Execute a skill/function/task command within a session",
             "body": {
-                "sessionId": {
-                    "type": "string",
-                    "required": true
-                },
-                "command": {
-                    "type": "string",
-                    "required": false,
-                    "description": "\"skill\" | \"function\""
-                },
-                "targetId": {
-                    "type": "string",
-                    "required": true
-                },
-                "args": {
-                    "type": "string",
-                    "required": false
-                }
+                "sessionId": { "type": "string", "required": true },
+                "command": { "type": "string", "required": false, "description": "\"skill\" | \"function\"" },
+                "targetId": { "type": "string", "required": true },
+                "args": { "type": "string", "required": false }
             },
             "response": "{ status: \"started\", taskId }"
         },
@@ -101,42 +77,14 @@
             "path": "/session",
             "description": "Create a new session",
             "body": {
-                "caseNumber": {
-                    "type": "string",
-                    "required": true
-                },
-                "caseId": {
-                    "type": "string",
-                    "required": true
-                },
-                "agentId": {
-                    "type": "string",
-                    "required": false,
-                    "description": "Defaults to configured default agent"
-                },
-                "configId": {
-                    "type": "string",
-                    "required": false,
-                    "description": "Runtime config ID (from agent configs)"
-                },
-                "yamlServerUrl": {
-                    "type": "string",
-                    "required": false,
-                    "description": "YAML Server endpoint, falls back to env/default"
-                },
-                "dataServerUrl": {
-                    "type": "string",
-                    "required": false,
-                    "description": "Data Server endpoint, falls back to agent config/env/default"
-                },
-                "verbose": {
-                    "type": "boolean",
-                    "required": false
-                },
-                "reuseSandbox": {
-                    "type": "boolean",
-                    "required": false
-                }
+                "caseNumber": { "type": "string", "required": true },
+                "caseId": { "type": "string", "required": true },
+                "agentId": { "type": "string", "required": false, "description": "Defaults to configured default agent" },
+                "configId": { "type": "string", "required": false, "description": "Runtime config ID (from agent configs)" },
+                "yamlServerUrl": { "type": "string", "required": false, "description": "YAML Server endpoint, falls back to env/default" },
+                "dataServerUrl": { "type": "string", "required": false, "description": "Data Server endpoint, falls back to agent config/env/default" },
+                "verbose": { "type": "boolean", "required": false },
+                "reuseSandbox": { "type": "boolean", "required": false }
             },
             "response": "{ sessionId, caseId, agentId, status }"
         },
@@ -151,10 +99,7 @@
             "path": "/session/:sessionId/task",
             "description": "Submit a task to an active session",
             "body": {
-                "query": {
-                    "type": "string",
-                    "required": true
-                }
+                "query": { "type": "string", "required": true }
             },
             "response": "{ taskId, status: \"started\" }"
         },
@@ -163,14 +108,8 @@
             "path": "/session/:sessionId/reply",
             "description": "Reply to a pending ask from the agent",
             "body": {
-                "askId": {
-                    "type": "string",
-                    "required": true
-                },
-                "input": {
-                    "type": "string",
-                    "required": true
-                }
+                "askId": { "type": "string", "required": true },
+                "input": { "type": "string", "required": true }
             },
             "response": "{ ok: true }"
         },

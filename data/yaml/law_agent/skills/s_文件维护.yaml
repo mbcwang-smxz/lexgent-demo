@@ -2,7 +2,8 @@ type: "skill"
 id: "Skill_文件维护"
 alias: "s14"
 name: "案件环境维护"
-version: "2.0.0"
+version: "3.0.0"
+execution_type: "tasks"
 description: |
   处理清除生成文件、重置分析流程等维护指令。
   需要读取文件列表元数据。
@@ -13,10 +14,18 @@ inputs:
     description: "当前案件所有文件的元数据列表"
     required: true
 
-on_result:
-  - type: "deletion"
+tasks:
+  - id: "分析"
+    prompt_ref: "law_agent/prompts/p_文件维护.hbs"
+    outputs:
+      - id: "result"
+    llm_config:
+      temperature: 0.1
 
-task:
-  prompt_ref: "law_agent/prompts/p_文件维护.hbs"
-  llm_config:
-    temperature: 0.1
+  - id: "删除"
+    type: api_request
+    method: POST
+    endpoint: "/cases/{caseId}/files/batch-delete"
+    inputs:
+      - name: "patterns"
+        ref: "tasks.分析.result.patterns"

@@ -2,7 +2,7 @@ type: "skill"
 id: "Skill_文件转换"
 alias: "s11"
 name: "文件格式转换"
-version: "3.0.0"
+version: "4.0.0"
 description: |
   将PDF或Word文件（P## 系列）转换为Markdown格式。
   转换后的文件注册为 U## 未分类文档，等待后续分类。
@@ -14,10 +14,6 @@ inputs:
     filter: "待转换文档"
     required: false
     description: "类型为'待转换文档'的文件列表（自动注入，无需指定）"
-
-on_result:
-  - type: "api_call"
-    endpoint: "classification"
 
 task:
   prompt_ref: "law_agent/prompts/p_文件转换"

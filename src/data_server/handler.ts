@@ -231,13 +231,54 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
             return;
         }
 
+        // POST /cases/:caseId/files/batch-delete
+        if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[3] === 'batch-delete' && req.method === 'POST') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const body = await getBody(req);
+            let patterns: string[] = [];
+            try {
+                const parsed = JSON.parse(body);
+                patterns = Array.isArray(parsed.patterns) ? parsed.patterns : [];
+            } catch { /* empty body or invalid JSON → no-op */ }
+
+            if (patterns.length === 0) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ deleted: [] }));
+                return;
+            }
+
+            const allDeleted: string[] = [];
+            for (const pattern of patterns) {
+                const deleted = await fsUtils.deleteFiles(caseId, pattern);
+                allDeleted.push(...deleted);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ deleted: allDeleted }));
+            return;
+        }
+
         // POST /cases/:caseId/files/:filename
         if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[3] && req.method === 'POST') {
             const caseId = decodeURIComponent(pathParts[1]);
             const filename = decodeURIComponent(pathParts[3]);
             const body = await getBody(req);
-            const { content } = JSON.parse(body);
-            await fsUtils.writeFile(caseId, filename, content);
+            const { content, id, type_ref } = JSON.parse(body);
+            const contentStr = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+            await fsUtils.writeFile(caseId, filename, contentStr);
+
+            // Optionally upsert metadata entry when id or type_ref provided
+            if (id || type_ref) {
+                const context = await fsUtils.loadMetadata(caseId);
+                context.files = upsertFile(context.files, {
+                    id: id || filename,
+                    type: type_ref || id || 'unknown',
+                    filename,
+                    path: `${caseId}/${filename}`,
+                    lastModified: new Date(),
+                });
+                await fsUtils.saveMetadata(caseId, context);
+            }
+
             res.writeHead(200);
             res.end(JSON.stringify({ status: 'ok' }));
             return;

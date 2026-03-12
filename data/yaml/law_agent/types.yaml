@@ -123,3 +123,8 @@ types:
     name: "无关文档"
     category: "system"
     description: "经分类确认与案件无关的文档（ID前缀：X##）。"
+
+  - id: "用户文档"
+    name: "用户文档"
+    category: "system"
+    description: "用户通过文件操作技能手动创建的文档，不参与自动分类。"

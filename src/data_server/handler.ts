@@ -231,6 +231,93 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
             return;
         }
 
+        // POST /cases/:caseId/files/ops (unified file operations: create/copy/remove/modify)
+        if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[3] === 'ops' && req.method === 'POST') {
+            const caseId = decodeURIComponent(pathParts[1]);
+            const body = await getBody(req);
+            const { action, filename, source, content } = JSON.parse(body);
+
+            // Validate action
+            const VALID_ACTIONS = ['create', 'copy', 'remove', 'modify'];
+            if (!action || !VALID_ACTIONS.includes(action)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Invalid action: ${action}. Must be one of: ${VALID_ACTIONS.join(', ')}` }));
+                return;
+            }
+
+            // Protected files — cannot write or delete
+            const PROTECTED_FILES = new Set(['metadata.json', 'llm_cache.json']);
+
+            if (action === 'remove') {
+                if (!filename) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing filename for remove action' }));
+                    return;
+                }
+                // Reuse deleteFiles safety logic (protects metadata.json, llm_cache.json, R-prefixed, events/replies)
+                const deleted = await fsUtils.deleteFiles(caseId, filename);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: 'ok', action: 'remove', deleted }));
+                return;
+            }
+
+            // create / copy / modify all produce a file
+            if (!filename) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Missing filename for ${action} action` }));
+                return;
+            }
+            if (PROTECTED_FILES.has(filename)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Cannot write to protected file: ${filename}` }));
+                return;
+            }
+
+            let fileContent: string;
+
+            if (action === 'copy') {
+                if (!source) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing source for copy action' }));
+                    return;
+                }
+                const sourceContent = await fsUtils.readFile(caseId, source);
+                if (sourceContent === null) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Source file not found: ${source}` }));
+                    return;
+                }
+                fileContent = content || sourceContent; // LLM may transform content during copy
+            } else {
+                // create / modify
+                if (content === undefined || content === null) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Missing content for ${action} action` }));
+                    return;
+                }
+                fileContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+            }
+
+            await fsUtils.writeFile(caseId, filename, fileContent);
+
+            // Register in metadata as "用户文档" to prevent getCaseContext from
+            // re-registering it as U## (未分类文档) and triggering classification
+            const context = await fsUtils.loadMetadata(caseId);
+            context.files = upsertFile(context.files, {
+                id: filename,
+                type: '用户文档',
+                filename,
+                path: `${caseId}/${filename}`,
+                lastModified: new Date(),
+            });
+            await fsUtils.saveMetadata(caseId, context);
+
+            console.log(`[files/ops] ${action}: ${filename} (${fileContent.length} chars)`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok', action, filename }));
+            return;
+        }
+
         // POST /cases/:caseId/files/batch-delete
         if (pathParts[0] === 'cases' && pathParts[2] === 'files' && pathParts[3] === 'batch-delete' && req.method === 'POST') {
             const caseId = decodeURIComponent(pathParts[1]);

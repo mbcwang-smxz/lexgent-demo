@@ -153,7 +153,7 @@ export class FileSystem {
      * @param options.caseNumber Optional metadata.
      * @param options.sourceTemplateId The source data directory to copy from (e.g. 'case-101'). Defaults to caseId.
      */
-    async initializeCase(caseId: string, options?: { reset?: boolean, caseNumber?: string }): Promise<string> {
+    async initializeCase(caseId: string, options?: { reset?: boolean, caseNumber?: string }): Promise<{ caseDir: string, warning?: string }> {
         const caseDir = this.resolveCaseDir(caseId);
         
         // Determine whether to reset
@@ -167,7 +167,7 @@ export class FileSystem {
                  ctx.metadata.caseNumber = options.caseNumber;
                  await this.saveMetadata(caseId, ctx);
             }
-            return caseDir;
+            return { caseDir };
         }
 
         // 2. Prepare for Creation/Reset
@@ -188,7 +188,7 @@ export class FileSystem {
                      created: new Date().toISOString()
                  }
              });
-             return caseDir;
+             return { caseDir, warning: `案件 "${options?.caseNumber || caseId}" 不存在，已创建空案件环境。如需使用已有案件，请确认案件号是否正确。` };
         }
 
         console.log(`[CaseServer] Resetting/Creating case directory: ${caseDir} from ${sourceDir}`);
@@ -223,7 +223,7 @@ export class FileSystem {
             await this.saveMetadata(caseId, ctx);
         }
 
-        return caseDir;
+        return { caseDir };
     }
 
     resolveCaseDir(caseId: string): string {

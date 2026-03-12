@@ -55,25 +55,28 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
             
             // Dynamic Case ID Logic
             let caseId: string;
-            
+            let initWarning: string | undefined;
+
             if (caseNumber) {
                 // Safe Case ID from Case Number (replace unsafe chars with _)
                 caseId = caseNumber.replace(/[\/\\?%*:|"<>]/g, '_');
                 console.log(`[CaseServer] Using provided Case Number as ID: ${caseId}`);
-                
-                await fsUtils.initializeCase(caseId, { 
-                    reset: !!reset, 
+
+                const result = await fsUtils.initializeCase(caseId, {
+                    reset: !!reset,
                     caseNumber
                 });
+                initWarning = result.warning;
             } else {
                 // Fallback Legacy Logic (if caseNumber missing)
                 if (reset) {
                     caseId = `case-${Date.now()}`;
                     console.log(`[CaseServer] Reset (New) requested. Generated ID: ${caseId}`);
-                    await fsUtils.initializeCase(caseId, { 
-                        reset: true, 
+                    const result = await fsUtils.initializeCase(caseId, {
+                        reset: true,
                         caseNumber
                     });
+                    initWarning = result.warning;
                 } else {
                     const latestId = await fsUtils.findLatestCaseId();
                     if (latestId) {
@@ -83,14 +86,17 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
                         caseId = 'case-101';
                         // ...
                     }
-                    await fsUtils.initializeCase(caseId, { reset: false, caseNumber });
+                    const result = await fsUtils.initializeCase(caseId, { reset: false, caseNumber });
+                    initWarning = result.warning;
                 }
             }
-            
-            const dataRoot = fsUtils.resolveCaseDir(caseId); // Resolving manually or using return from initializeCase
-            
+
+            const dataRoot = fsUtils.resolveCaseDir(caseId);
+
+            const response: any = { status: 'initialized', caseId, dataRoot };
+            if (initWarning) response.warning = initWarning;
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'initialized', caseId, dataRoot }));
+            res.end(JSON.stringify(response));
             return;
         }
 

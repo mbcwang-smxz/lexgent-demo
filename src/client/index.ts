@@ -87,7 +87,7 @@ async function fetchTaskMap(agentId: string): Promise<Record<string, { desc: str
 /**
  * Initialize case via Data Server
  */
-async function initCase(caseNumber: string, reset: boolean): Promise<string> {
+async function initCase(caseNumber: string, reset: boolean): Promise<{ caseId: string, warning?: string }> {
     const res = await fetch(`${DATA_SERVER_URL}/cases/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ async function initCase(caseNumber: string, reset: boolean): Promise<string> {
     }
 
     const data = await res.json();
-    return data.caseId;
+    return { caseId: data.caseId, warning: data.warning };
 }
 
 /**
@@ -226,8 +226,12 @@ LexGent 客户端工具使用说明:
     // Initialize case via Data Server
     let caseId: string;
     try {
-        caseId = await initCase(config.caseNumber, !config.reuseSandbox);
+        const initResult = await initCase(config.caseNumber, !config.reuseSandbox);
+        caseId = initResult.caseId;
         console.log(`[System] Case initialized: ${caseId}`);
+        if (initResult.warning) {
+            console.log(`⚠️  ${initResult.warning}`);
+        }
     } catch (e: any) {
         console.error(`\n❌ Case initialization failed: ${e.message}`);
         process.exit(1);

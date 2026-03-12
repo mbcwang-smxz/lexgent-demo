@@ -1,6 +1,6 @@
 
 import readline from 'readline';
-import { ICaseStore } from './case_store';
+import { ICaseDataStore } from './case_store';
 
 export interface IActionHandler {
     log(text: string): void;
@@ -11,7 +11,7 @@ export interface IActionHandler {
 }
 
 export class TaskRunner {
-    private caseStore: ICaseStore | null = null;
+    private caseDataStore: ICaseDataStore | null = null;
 
     constructor(
         private agentServerUrl: string,
@@ -19,8 +19,8 @@ export class TaskRunner {
         private serverUrls?: { dataServerUrl?: string; yamlServerUrl?: string }
     ) {}
 
-    setCaseStore(caseStore: ICaseStore) {
-        this.caseStore = caseStore;
+    setCaseDataStore(caseDataStore: ICaseDataStore) {
+        this.caseDataStore = caseDataStore;
     }
 
     async runTask(
@@ -206,10 +206,10 @@ export class TaskRunner {
 
         if (action === 'display_content' || action === 'display_document') {
             // Mode 1: Display document content
-            if (inputs && inputs.length > 0 && this.caseStore) {
+            if (inputs && inputs.length > 0 && this.caseDataStore) {
                 for (const file of inputs) {
                     try {
-                        const content = (file as any).metadata?._content ?? await this.caseStore.readFile(file.filename);
+                        const content = (file as any).metadata?._content ?? await this.caseDataStore.readFile(file.filename);
                         const title = `${file.filename} (${file.type || 'unknown'})`;
 
                         console.log(`\n${'='.repeat(60)}`);

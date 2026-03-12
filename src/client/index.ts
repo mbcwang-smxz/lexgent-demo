@@ -1,7 +1,7 @@
 /// <reference path="../types/modules.d.ts" />
 import readline from 'readline';
 import { CONFIG } from '@/config/settings';
-import { CaseStore } from './case_store';
+import { CaseDataStore } from './case_store';
 import { parseArgs } from './args';
 import { TaskRunner, IActionHandler } from './runner';
 
@@ -253,11 +253,11 @@ LexGent 客户端工具使用说明:
         }
     };
 
-    // Create CaseStore for data access
-    const caseStore = new CaseStore(caseId, DATA_SERVER_URL);
+    // Create CaseDataStore for data access
+    const caseDataStore = new CaseDataStore(caseId, DATA_SERVER_URL);
 
     const runner = new TaskRunner(AGENT_SERVER_URL, cliHandler, { dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL });
-    runner.setCaseStore(caseStore);
+    runner.setCaseDataStore(caseDataStore);
     const runOptions = {
         verbose: config.verbose,
         reuseSandbox: config.reuseSandbox,
@@ -416,7 +416,7 @@ LexGent 客户端工具使用说明:
                     if (inputs && inputs.length > 0) {
                         for (const file of inputs) {
                             try {
-                                const content = (file as any).metadata?._content ?? await caseStore.readFile(file.filename);
+                                const content = (file as any).metadata?._content ?? await caseDataStore.readFile(file.filename);
                                 const title = `${file.filename} (${file.type || 'unknown'})`;
                                 console.log(`\n${'='.repeat(60)}`);
                                 console.log(`  ${title}`);
@@ -554,7 +554,7 @@ LexGent 客户端工具使用说明:
 
                 if (cmd === 'reset-context') {
                     try {
-                        const deleted = await caseStore.deleteFiles('D*');
+                        const deleted = await caseDataStore.deleteFiles('D*');
                         console.log(`[Context] Reset complete. Deleted: ${deleted.length} files`);
                         if (deleted.length > 0) {
                             console.log(`  Files: ${deleted.join(', ')}`);

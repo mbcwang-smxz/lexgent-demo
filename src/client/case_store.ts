@@ -1,15 +1,15 @@
 /**
- * CaseStore - Per-case data access via HTTP to Data Server
+ * CaseDataStore - Per-case data access via HTTP to Data Server
  */
 
-export interface ICaseStore {
+export interface ICaseDataStore {
     readonly caseId: string;
     readonly baseUrl: string;
     readFile(filename: string): Promise<string>;
     deleteFiles(pattern: string): Promise<string[]>;
 }
 
-export class CaseStore implements ICaseStore {
+export class CaseDataStore implements ICaseDataStore {
     readonly caseId: string;
     readonly baseUrl: string;
 
@@ -21,14 +21,14 @@ export class CaseStore implements ICaseStore {
     async readFile(filename: string): Promise<string> {
         const url = `${this.baseUrl}/cases/${this.caseId}/files/${encodeURIComponent(filename)}`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`CaseStore readFile failed: ${res.statusText}`);
+        if (!res.ok) throw new Error(`CaseDataStore readFile failed: ${res.statusText}`);
         return await res.text();
     }
 
     async deleteFiles(pattern: string): Promise<string[]> {
         const url = `${this.baseUrl}/cases/${this.caseId}/files?pattern=${encodeURIComponent(pattern)}`;
         const res = await fetch(url, { method: 'DELETE' });
-        if (!res.ok) throw new Error(`CaseStore deleteFiles failed: ${res.statusText}`);
+        if (!res.ok) throw new Error(`CaseDataStore deleteFiles failed: ${res.statusText}`);
         const json = await res.json() as { deleted: string[] };
         return json.deleted;
     }

@@ -17,7 +17,7 @@ export interface IDataStore {
  * LocalDataStore - Local filesystem implementation of IDataStore
  *
  * Used only within data_server internals and for testing.
- * All production code should use CaseStore (HTTP) instead.
+ * All production code should use CaseDataStore (HTTP) instead.
  */
 export class LocalDataStore implements IDataStore {
     private fs: FileSystem;

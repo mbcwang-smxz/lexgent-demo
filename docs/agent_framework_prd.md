@@ -253,7 +253,7 @@ file_registry_item:
 
 #### 3.4.4 Analyser 如何获取文件列表
 
-Orchestrator 在调用 Analyser 前，从 Case Server 获取当前案件的文件列表摘要，并注入到 Analyser 的 System Prompt 中：
+Orchestrator 在调用 Analyser 前，从 Data Server 获取当前案件的文件列表摘要，并注入到 Analyser 的 System Prompt 中：
 
 **注入格式:**
 ```
@@ -518,8 +518,8 @@ resolution:
 | :--- | :--- | :--- |
 | **System** | `settings.yaml` | 框架级配置 |
 | **Agent** | `agent.yaml` | Agent 身份和能力描述 |
-| **Case** | Case Server | 运行时案件上下文（见 3.5） |
-| **File** | Case Server | 单文件类型、标签（见 3.4.2） |
+| **Case** | Data Server | 运行时案件上下文（见 3.5） |
+| **File** | Data Server | 单文件类型、标签（见 3.4.2） |
 
 #### 3.10.2 Metadata Provider 接口
 
@@ -527,7 +527,7 @@ resolution:
 
 | 实现 | 场景 |
 | :--- | :--- |
-| REST API Provider | 生产环境，调用 Case Server |
+| REST API Provider | 生产环境，调用 Data Server |
 | Local File Provider | 开发/测试，读写本地 JSON |
 | In-Memory Provider | 单元测试 |
 

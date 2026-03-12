@@ -61,23 +61,27 @@ YAML Server 提供只读 REST API，从 `data/yaml/` 目录加载并提供 Agent
   "name": "民事诉讼 Agent",
   "version": "2.0.0",
   "description": "辅助处理民事案件分析与文书起草。",
-  "model": { "provider": "gemini", "name": "gemini-pro" },
+  "model_name": "deepseek/deepseek-chat",
   "skills": [
-    "law_agent/skills/s_当事人提取",
-    { "type": "skill", "id": "Skill_内联测试", "..." : "..." }
+    "law_agent/skills/s*.yaml"
   ],
-  "document_types": "law_agent/types",
-  "functions": {
-    "default_base_url": "http://localhost:3000",
-    "list": [
-      "law_agent/functions/f_案件查询",
-      "law_agent/functions/f_法条检索"
-    ]
+  "tasks": [
+    "law_agent/tasks/t*.yaml"
+  ],
+  "document_types": "law_agent/types.yaml",
+  "functions": [
+    "law_agent/functions/f*.yaml"
+  ],
+  "analyser_prompt": "law_agent/prompts/p_analyser.hbs",
+  "default_config": "dev",
+  "context_prop": {
+    "key": "caseId",
+    "path": "/cases/{caseId}/context"
   }
 }
 ```
 
-> `skills` 数组同时支持路径字符串和内联 Skill 对象。
+> `skills` 数组同时支持通配符路径字符串和内联 Skill 对象。`model_name` 格式为 `{provider}/{model}`。
 
 **错误**: `404` `{"error": "Agent 'xxx' not found"}`
 
@@ -142,13 +146,18 @@ YAML Server 提供只读 REST API，从 `data/yaml/` 目录加载并提供 Agent
 {
   "type": "document_type",
   "name": "法律文书类型注册表",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "types": [
-    { "id": "民事起诉状", "name": "民事起诉状", "category": "raw", "format": "text" },
-    { "id": "当事人信息", "name": "当事人信息", "category": "derived", "format": "json" }
+    { "id": "民事起诉状", "name": "民事起诉状", "category": "raw" },
+    { "id": "当事人信息", "name": "当事人信息", "category": "derived", "format": "json" },
+    { "id": "待转换文档", "name": "待转换文档", "category": "system" },
+    { "id": "未分类文档", "name": "未分类文档", "category": "system" },
+    { "id": "无关文档", "name": "无关文档", "category": "system" }
   ]
 }
 ```
+
+> `category` 支持 `"raw"`（已分类原始文书，R##）、`"derived"`（AI 生成，D##）、`"system"`（处理状态，P##/U##/X##）。
 
 ---
 
@@ -183,9 +192,9 @@ YAML Server 提供只读 REST API，从 `data/yaml/` 目录加载并提供 Agent
 | Skill | `{agent}/skills/` | `.yaml` | `/agents/{agentId}/skills/{id}` | 已实现 |
 | Prompt | `{agent}/prompts/` | `.hbs` | `/agents/{agentId}/prompts/{name}` | 已实现 |
 | Document Type | `{agent}/` | `types.yaml` | `/agents/{agentId}/types` | 已实现 |
-| Function | `{agent}/functions/` | `.yaml` | — | 由 Loader 本地加载 |
-| Task | `{agent}/tasks/` | `.yaml` | — | 由 Loader 本地加载 |
-| Worker | `{agent}/workers/` | `.js` | — | 仅本地执行，不经过 YAML Server |
+| Function | `{agent}/functions/` | `.yaml` | `/agents/{agentId}/functions/{id}` | 已实现 |
+| Task | `{agent}/tasks/` | `.yaml` | `/agents/{agentId}/tasks/{id}` | 已实现 |
+| Worker | `{agent}/functions/` | `.js` | `/agents/{agentId}/source/{name}` | 已实现（JS 源码） |
 
 ---
 

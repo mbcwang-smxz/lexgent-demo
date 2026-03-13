@@ -5,13 +5,13 @@ import { ICaseDataStore } from './case_store';
 /** Map log type to icon prefix */
 function logIcon(type?: string): string {
     switch (type) {
-        case 'init':     return '⚙ ';
+        case 'init':     return '⚙  ';
         case 'request':  return '📨 ';
         case 'analyser': return '🔍 ';
         case 'plan':     return '📋 ';
-        case 'step':     return '▶ ';
-        case 'result':   return '✔ ';
-        case 'skip':     return '⏭ ';
+        case 'step':     return '▶  ';
+        case 'result':   return '✔  ';
+        case 'skip':     return '⏭  ';
         case 'error':    return '❌ ';
         case 'reply':    return '💬 ';
         default:         return '';

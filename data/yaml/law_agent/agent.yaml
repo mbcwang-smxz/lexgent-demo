@@ -8,12 +8,14 @@ model_name: 'deepseek/deepseek-chat'
 document_types: 'law_agent/types.yaml'
 
 skills:
+    # - 'law/skills/s*.yaml'
     - 'law_agent/skills/s*.yaml'
 
 tasks:
     - 'law_agent/tasks/t*.yaml'
 
 functions:
+    # - 'law/functions/f*.yaml'
     - 'law_agent/functions/f*.yaml'
 
 analyser_prompt: 'law_agent/prompts/p_analyser.hbs'

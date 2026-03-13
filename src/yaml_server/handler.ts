@@ -305,6 +305,8 @@ export const handleRequest: http.RequestListener = async (req, res) => {
         return;
     }
 
+    const start = Date.now();
+
     // Initialize cache on first request
     if (!cacheInitialized) {
         await initCache();
@@ -313,6 +315,24 @@ export const handleRequest: http.RequestListener = async (req, res) => {
 
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const { parts, agentId } = parseRoute(url.pathname);
+
+    // Request logging helper
+    const logRequest = (status: number, detail?: string) => {
+        const ms = Date.now() - start;
+        const info = detail ? ` ${detail}` : '';
+        console.log(`[YamlServer] ${req.method} ${decodeURIComponent(url.pathname)}${url.search} → ${status} (${ms}ms)${info}`);
+    };
+
+    // Wrap response helpers to include logging
+    const origEnd = res.end.bind(res);
+    let logged = false;
+    res.end = function (...args: any[]) {
+        if (!logged) {
+            logged = true;
+            logRequest(res.statusCode);
+        }
+        return origEnd(...args);
+    } as any;
 
     // Only GET requests are supported
     if (req.method !== 'GET') {

@@ -2,12 +2,11 @@ type: "skill"
 id: "Skill_文书生成"
 alias: "s09"
 name: "文书自动组装"
-version: "3.0.0"
-execution_type: "tasks"
+version: "4.0.0"
 description: |
   将各确认模块（当事人、事实、说理等）组装成完整文书草稿。
   适用场景: 判决书最终生成。
-  关键依赖: D01/D02/D05/D07/D08等分析结果。
+  关键依赖: 当事人信息、诉辩主张、无争议事实、事实认定、裁判说理等分析结果。
 
 inputs:
   - name: "source_docs"
@@ -15,24 +14,10 @@ inputs:
     description: "当事人信息、诉辩主张、事实认定、裁判说理等模块。"
 
 outputs:
-  - id: "D09"
-    filename_template: "D09_裁判文书草稿.md"
+  - type_ref: "裁判文书草稿"
 
-tasks:
-  - id: "生成"
-    prompt_ref: "law_agent/prompts/p_文书生成.hbs"
-    outputs:
-      - id: "result"
-    llm_config:
-      temperature: 0.1
-      max_tokens: 8192
-
-  - id: "保存"
-    type: api_request
-    method: POST
-    endpoint: "/cases/{caseId}/files/D09_裁判文书草稿.md"
-    body:
-      id: "D09"
-    inputs:
-      - name: "content"
-        ref: "tasks.生成.result"
+task:
+  prompt_ref: "law_agent/prompts/p_文书生成.hbs"
+  llm_config:
+    temperature: 0.1
+    max_tokens: 8192

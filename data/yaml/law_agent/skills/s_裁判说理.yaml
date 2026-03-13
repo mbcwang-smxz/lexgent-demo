@@ -2,22 +2,19 @@ type: "skill"
 id: "Skill_裁判说理"
 alias: "s08"
 name: "裁判说理生成"
-version: "4.0.0"
+version: "4.1.0"
 execution_type: "tasks"
 description: |
   匹配适用法律，针对认定事实生成"本院认为"部分的逻辑论述。
-  采用多阶段任务：1. 法条检索；2. 逻辑分析；3. 文书撰写；4. 保存。
-  使用 tasks 结构，支持引用外部 task 和内联定义。
+  采用多阶段任务：1. 法条检索；2. 逻辑分析；3. 文书撰写。
 
 inputs:
   - name: "source_docs"
     required: true
-    description: "事实认定结果(D07)。"
+    description: "事实认定结果。"
 
 outputs:
-  - id: "D08"
-    type_ref: "裁判说理"
-    filename_template: "D08_争议焦点说理.json"
+  - type_ref: "裁判说理"
 
 tasks:
   # 1. 引用外部 task - 法条检索
@@ -63,20 +60,8 @@ tasks:
       - name: "analysis"
         ref: "tasks.逻辑分析.分析结果"
     outputs:
-      - id: "D08"
+      - id: "result"
     llm_config:
       temperature: 0.2
     functions:
       - "Func_案件查询"
-
-  # 4. 保存结果到文件
-  - id: "保存"
-    type: api_request
-    method: POST
-    endpoint: "/cases/{caseId}/files/D08_争议焦点说理.json"
-    body:
-      id: "D08"
-      type_ref: "裁判说理"
-    inputs:
-      - name: "content"
-        ref: "tasks.文书撰写.D08"

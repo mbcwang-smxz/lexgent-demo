@@ -106,7 +106,7 @@ settings:
 
 ## 4. 第二步：定义 Skill (`skills/*.yaml`)
 
-Skill 是工作流的核心单元。一个 Skill 包含三个要素：**输入 (Inputs)** -> **任务 (Task)** -> **结果处理 (On Result)**。
+Skill 是工作流的核心单元。一个 Skill 包含三个要素：**输入 (Inputs)** -> **任务 (Task)** -> **输出 (Outputs)**。
 
 **文件路径**: `data/yaml/law_agent/skills/s_当事人提取.yaml`
 
@@ -120,7 +120,7 @@ type: "skill"
 id: "Skill_当事人提取"              # 技能唯一 ID
 alias: "s01"                        # 短别名，用于 CLI 快捷调用（如 /s01）
 name: "当事人信息提取"               # 技能名称，显示在菜单中
-version: "2.0.0"
+version: "4.0.0"
 description: "从起诉状等初始文件中提取原告与被告详细信息。"
 
 # ======= 1. 输入定义 (Inputs) =======
@@ -147,25 +147,25 @@ inputs:
 #     filter: "待转换文档"
 #     required: false
 
-# ======= 2. 任务定义 (Task) =======
+# ======= 2. 输出声明 (Outputs) =======
+# 声明 type_ref 后，框架自动保存文件并分配 D## ID
+outputs:
+  - type_ref: "当事人信息"          # 引用 types.yaml 中的文档类型 ID
+
+# ======= 3. 任务定义 (Task) =======
 # 定义具体的执行逻辑
 task:
   # 引用提示词模板
   # 指向 data/yaml/law_agent/prompts/p_当事人提取.hbs
-  prompt_ref: "law_agent/prompts/p_当事人提取"
+  prompt_ref: "law_agent/prompts/p_当事人提取.hbs"
 
   # LLM 参数配置 (可选)
   llm_config:
     temperature: 0.1        # 0.0 最严谨(适合提取信息), 1.0 最发散(适合创意写作)
-
-# ======= 3. 结果处理 (On Result) =======
-# 定义执行完成后如何处理输出
-on_result:
-  - type: "save_file"                   # 操作类型：保存为文件
-    id: "D01"                           # 结果文件的 ID (供后续技能引用)
-    filename: "D01_当事人信息.json"       # 保存的文件名
-    type_ref: "当事人信息"                # 文件类型(在 types.yaml 中定义)
 ```
+
+> **进阶：手动模式 (`on_result`)**
+> 如果需要手动控制文件 ID 和文件名，可以使用 `on_result: save_file` 代替 `outputs.type_ref` 自动保存。详见[第 8 节](#8-结果处理-on_result)。
 
 ---
 
@@ -410,33 +410,38 @@ types:
 | `format` | 否 | 文件格式：`text`、`json`、`markdown`、`pdf`（可选，不限制实际格式） |
 | `description` | 否 | 类型描述 |
 
-### 7.4 与 `on_result` 的关系
+### 7.4 与 `outputs.type_ref` 的关系
 
-技能通过 `on_result` 中的 `type_ref` 将输出文件关联到文档类型：
+技能通过 `outputs` 中的 `type_ref` 将输出文件关联到文档类型。**推荐使用自动保存模式**——只需声明 `type_ref`，框架自动分配 D## ID、生成文件名并保存：
 
 ```yaml
-# 在技能 s_当事人提取.yaml 中：
-on_result:
-  - type: "save_file"
-    id: "D01"
-    filename: "D01_当事人信息.json"
-    type_ref: "当事人信息"          # ← 引用 types.yaml 中的 id
+# 在技能 s_当事人提取.yaml 中（推荐：自动保存模式）：
+outputs:
+  - type_ref: "当事人信息"          # ← 引用 types.yaml 中的 id
 
 # 在 types.yaml 中：
 types:
   - id: "当事人信息"                # ← 被引用的类型定义
     category: "derived"
-    format: "json"
+    format: "json"                  # ← 框架据此决定文件扩展名（.json）
 ```
 
-保存文件时，框架会将 `type_ref` 写入文件元数据。之后任何需要查询"当事人信息"类型文件的操作都可以通过类型检索到它。
+**自动保存规则**：当 `outputs` 中有 `type_ref` 但没有 `id` 时，框架会：
+1. 从已有 D## 文件中计算下一个可用 ID（如已有 D01~D03，则分配 D04）
+2. 根据 `type_ref` + `format` 生成文件名（如 `D04_当事人信息.json`）
+3. 自动调用 Data Server 保存文件并注册元数据
+4. **幂等性**：如果该类型的文件已存在，复用已有 D## ID 并覆盖内容
+
+> **手动模式**：如果需要精确控制文件 ID 和文件名，可以使用 `on_result: save_file`（详见[第 8 节](#8-结果处理-on_result)）或在 `outputs` 中显式指定 `id` 字段。
 
 ---
 
 ## 8. 结果处理 (`on_result`)
 
+> **推荐**：对于单输出的保存型技能，优先使用 `outputs: [{type_ref: "..."}]` 自动保存模式（详见[第 7.4 节](#74-与-outputstype_ref-的关系)），D## ID 和文件名由框架自动分配。`on_result` 适用于需要手动控制的高级场景（多输出 source 提取、API 调用、文件删除等）。
+
 `on_result` 定义技能执行完成后如何处理 LLM 的输出。它是一个数组，可以包含多个处理器。
-**当 `on_result` 未定义时，默认行为是将结果直接显示给用户。**
+**当 `on_result` 未定义且 `outputs` 不含 `type_ref` 时，默认行为是将结果直接显示给用户。**
 
 ### 8.1 `save_file` — 保存到文件
 
@@ -649,7 +654,29 @@ inputs:
 
 ### 9.5 输出声明 (`outputs`)
 
-声明任务的输出标识符，供后续任务引用：
+#### 技能级 outputs（自动保存）
+
+在 **Skill** 级别声明 `outputs` 并使用 `type_ref`（不指定 `id`），框架会自动保存 LLM 输出为文件：
+
+```yaml
+# 推荐写法：框架自动分配 D## ID、生成文件名、保存并注册
+outputs:
+  - type_ref: "当事人信息"          # 引用 types.yaml 中的类型 ID
+```
+
+如需手动控制 ID，可以显式指定 `id`（此时不触发自动保存，需配合 `on_result` 或 tasks pipeline）：
+
+```yaml
+# 手动模式：需自行处理保存逻辑
+outputs:
+  - id: "D01"
+    type_ref: "当事人信息"
+    filename_template: "D01_当事人信息.json"
+```
+
+#### 任务级 outputs（数据传递）
+
+在 **Task** 内部声明 `outputs`，用于任务间数据传递：
 
 ```yaml
 outputs:
@@ -773,12 +800,14 @@ parameters:
 
 ### 10.1 单任务 vs 多任务
 
-前面第 4 节展示的是**单任务**技能，使用 `task`（单数）字段：
+前面第 4 节展示的是**单任务**技能，使用 `task`（单数）+ `outputs.type_ref` 自动保存：
 
 ```yaml
-# 单任务：一次 LLM 调用即可完成
+# 单任务 + 自动保存：一次 LLM 调用，框架自动分配 D## ID 并保存
+outputs:
+  - type_ref: "当事人信息"
 task:
-  prompt_ref: "law_agent/prompts/p_当事人提取"
+  prompt_ref: "law_agent/prompts/p_当事人提取.hbs"
   llm_config:
     temperature: 0.1
 ```

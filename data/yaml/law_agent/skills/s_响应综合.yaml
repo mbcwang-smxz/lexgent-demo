@@ -19,7 +19,7 @@ description: |
 inputs:
   - name: "source_docs"
     required: true
-    description: "需要综合的分析文档（由前置步骤生成的 D01、D02 等）"
+    description: "需要综合的分析文档（由前置步骤生成的当事人信息、诉辩主张等）"
 
 execution_type: "tasks"
 

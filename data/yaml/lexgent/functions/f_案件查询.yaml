@@ -1,0 +1,26 @@
+type: "function"
+id: "Func_案件查询"
+alias: "f01"
+calling_name: "case_query"
+name: "案例查询"
+description: "根据关键词查询相关法律案例，返回匹配的案例摘要和引用信息。"
+
+# REST configuration
+endpoint: "/api/tools/case_query"
+method: "POST"
+base_url: "http://localhost:3000"
+
+# Function parameters for LLM
+parameters:
+  keywords:
+    type: "string"
+    required: true
+    description: "搜索关键词，用于匹配案例内容"
+  case_type:
+    type: "string"
+    enum: ["民事", "刑事", "行政"]
+    description: "案件类型过滤"
+  limit:
+    type: "number"
+    description: "返回结果数量限制"
+    default: 10

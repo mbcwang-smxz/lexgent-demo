@@ -1,0 +1,47 @@
+type: 'skill'
+id: 'Skill_初始化'
+alias: 's_init'
+name: '文档分类'
+version: '2.0.0'
+description: |
+    对未分类文档（U##）进行法律文书类型分类。
+    由 init_skill 自动触发（当有 U## 文件时），无需手动调用。
+    文件扫描、同步、转换由 Engine 的 ContextInitializer 完成。
+    分类结果由 Engine 安全合并到 metadata（仅应用 U## 变更）。
+
+inputs: []
+
+execution_type: 'tasks'
+
+tasks:
+    # Step 1: Load current metadata (already synced by ContextInitializer)
+    - id: t_load_metadata
+      type: api_request
+      method: GET
+      endpoint: '/cases/{caseId}/metadata'
+      outputs:
+          - id: metadata
+
+    # Step 2: Scan files with content preview (for classification decisions)
+    - id: t_scan_files
+      type: api_request
+      method: GET
+      endpoint: '/cases/{caseId}/files/scan?preview=true'
+      outputs:
+          - id: scan
+
+    # Step 3: LLM classification of U## files
+    # Output is returned to Engine for safe merge — no direct save here
+    - id: t_classify
+      type: llm
+      prompt_ref: 'lexgent/prompts/p_init_classify.hbs'
+      inputs:
+          - name: metadata
+            ref: tasks.t_load_metadata.metadata
+          - name: scan
+            ref: tasks.t_scan_files.scan
+      outputs:
+          - id: classified_metadata
+      llm_config:
+          temperature: 0.1
+          max_tokens: 4096

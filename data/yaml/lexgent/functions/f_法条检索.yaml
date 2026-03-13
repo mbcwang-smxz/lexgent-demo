@@ -1,0 +1,24 @@
+type: "function"
+id: "Func_法条检索"
+alias: "f02"
+calling_name: "law_lookup"
+name: "法条检索"
+description: "检索指定法律法规的具体条文内容，支持按法规名称和条款号查询。"
+
+# REST configuration
+endpoint: "/api/tools/law_lookup"
+method: "POST"
+base_url: "http://localhost:3000"
+
+# Function parameters for LLM
+parameters:
+  law_name:
+    type: "string"
+    required: true
+    description: "法律法规名称，如'中华人民共和国民法典'"
+  article_number:
+    type: "string"
+    description: "条款号，如'第一百八十八条'"
+  keywords:
+    type: "string"
+    description: "条文内容关键词"

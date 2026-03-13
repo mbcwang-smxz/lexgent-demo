@@ -1,0 +1,40 @@
+type: 'skill'
+id: 'Skill_诉请分析'
+alias: 's02'
+name: '诉辩主张拆解'
+version: '3.0.0'
+execution_type: 'tasks'
+description: |
+    结构化提取原告的诉讼请求及其事实与理由，以及被告的答辩意见。
+    适用场景: 案件双方观点对比分析。
+    关键依赖: 起诉状和答辩状。
+
+inputs:
+    - name: 'source_docs'
+      required: true
+      description: '起诉状、答辩状等诉辩文书。'
+
+outputs:
+    - id: 'D02'
+      type_ref: '诉辩主张'
+      filename_template: 'D02_诉求与答辩信息.json'
+
+tasks:
+    - id: '分析'
+      prompt_ref: 'lexgent/prompts/p_诉请分析.hbs'
+      outputs:
+          - id: 'result'
+      llm_config:
+          temperature: 0.1
+          max_tokens: 4096
+
+    - id: '保存'
+      type: api_request
+      method: POST
+      endpoint: '/cases/{caseId}/files/D02_诉求与答辩信息.json'
+      body:
+          id: 'D02'
+          type_ref: '诉辩主张'
+      inputs:
+          - name: 'content'
+            ref: 'tasks.分析.result'

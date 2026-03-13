@@ -1,0 +1,33 @@
+type: 'agent'
+name: '民事诉讼 Agent'
+version: '2.0.0'
+description: '辅助处理民事案件分析与文书起草。'
+
+model_name: 'deepseek/deepseek-chat'
+
+document_types: 'law_agent/types.yaml'
+
+skills:
+    # - 'law/skills/s*.yaml'
+    - 'lexgent/skills/s*.yaml'
+
+tasks:
+    - 'lexgent/tasks/t*.yaml'
+
+functions:
+    # - 'law/functions/f*.yaml'
+    - 'lexgent/functions/f*.yaml'
+
+analyser_prompt: 'lexgent/prompts/p_analyser.hbs'
+
+init_skill: 'lexgent/skills/s_初始化.yaml'
+
+default_config: 'lexgent/configs/dev.yaml'
+
+context_prop:
+    key: 'caseId'
+    path: '/cases/{caseId}/context'
+
+settings:
+    timeout: 60000
+    context_refresh_strategy: 'per_turn'

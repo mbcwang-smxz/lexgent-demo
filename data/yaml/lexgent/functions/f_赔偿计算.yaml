@@ -1,0 +1,31 @@
+type: "function"
+id: "Func_赔偿计算"
+alias: "f03"
+calling_name: "damage_calc"
+name: "赔偿计算器"
+description: "根据案件类型和损失情况计算法定赔偿金额，支持人身损害、财产损失等计算。"
+
+# Internal implementation (JS source)
+source: "law_agent/functions/w_赔偿计算"
+
+# Function parameters for LLM
+parameters:
+  damage_type:
+    type: "string"
+    required: true
+    enum: ["人身损害", "财产损失", "精神损害", "误工费", "医疗费"]
+    description: "损害类型"
+  base_amount:
+    type: "number"
+    required: true
+    description: "基础损失金额（元）"
+  duration_days:
+    type: "number"
+    description: "损害持续天数（用于误工费等计算）"
+  disability_level:
+    type: "number"
+    description: "伤残等级（1-10级）"
+  region:
+    type: "string"
+    description: "地区（用于地区工资标准）"
+    default: "全国"

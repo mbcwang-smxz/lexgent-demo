@@ -1,0 +1,130 @@
+type: "document_type"
+name: "法律文书类型注册表"
+version: "2.0.0"
+
+types:
+  # ===== 原始文档 (Raw) — R## 前缀 =====
+  - id: "民事起诉状"
+    name: "民事起诉状"
+    category: "raw"
+    description: "原告提交的起诉状文书。"
+
+  - id: "民事答辩状"
+    name: "民事答辩状"
+    category: "raw"
+    description: "被告提交的答辩状文书。"
+
+  - id: "证据目录"
+    name: "证据目录"
+    category: "raw"
+
+  - id: "证据材料"
+    name: "证据材料"
+    category: "raw"
+    description: "案件相关证据文件（照片、合同、票据等）。"
+
+  - id: "庭审笔录"
+    name: "庭审笔录"
+    category: "raw"
+
+  - id: "询问笔录"
+    name: "询问笔录"
+    category: "raw"
+
+  - id: "民事判决书"
+    name: "民事判决书"
+    category: "raw"
+    description: "法院作出的民事裁判文书。"
+
+  - id: "民事调解书"
+    name: "民事调解书"
+    category: "raw"
+    description: "法院出具的调解协议确认文书。"
+
+  - id: "代理词"
+    name: "代理词"
+    category: "raw"
+    description: "律师在庭审中代理当事人发表的意见。"
+
+  - id: "其他"
+    name: "其他"
+    category: "raw"
+    description: "无法归入已知类型的文书，但与案件相关。"
+
+  # ===== 衍生文档 (Derived) — D## 前缀 =====
+  - id: "当事人信息"
+    name: "当事人信息"
+    category: "derived"
+    format: "json"
+    description: "从起诉状等材料提取的结构化当事人画像。"
+
+  - id: "诉辩主张"
+    name: "诉辩主张"
+    category: "derived"
+    format: "json"
+
+  - id: "证据分析"
+    name: "证据分析"
+    category: "derived"
+    format: "json"
+
+  - id: "争议焦点"
+    name: "争议焦点"
+    category: "derived"
+    format: "json"
+
+  - id: "无争议事实"
+    name: "无争议事实"
+    category: "derived"
+    format: "json"
+    description: "经事实筛选确认的无异议事实。"
+
+  - id: "有争议事实"
+    name: "有争议事实"
+    category: "derived"
+    format: "json"
+    description: "经事实筛选识别的有争议事实。"
+
+  - id: "庭审提纲"
+    name: "庭审提纲"
+    category: "derived"
+    format: "json"
+    description: "基于争议焦点生成的庭审发问提纲。"
+
+  - id: "事实认定"
+    name: "事实认定"
+    category: "derived"
+    format: "json"
+    description: "庭审后对争议事实的倾向性认定意见。"
+
+  - id: "裁判说理"
+    name: "裁判说理"
+    category: "derived"
+    format: "json"
+    description: "针对认定事实生成的法律论述与说理分析。"
+
+  - id: "裁判文书草稿"
+    name: "裁判文书草稿"
+    category: "derived"
+    format: "markdown"
+
+  # ===== 系统状态类型 (System State) =====
+  - id: "未分类文档"
+    name: "未分类文档"
+    category: "system"
+    description: "已上传或转换完成、但尚未完成内容分类的文档（ID前缀：U##）。"
+
+  - id: "待转换文档"
+    name: "待转换文档"
+    category: "system"
+    description: "PDF或Office格式文档，需先执行文件转换才能处理（ID前缀：P##）。"
+
+  - id: "无关文档"
+    name: "无关文档"
+    category: "system"
+    description: "经分类确认与案件无关的文档（ID前缀：X##）。"
+
+  - id: "用户文档"
+    name: "用户文档"
+    category: "system"
+    description: "用户通过文件操作技能手动创建的文档，不参与自动分类。"

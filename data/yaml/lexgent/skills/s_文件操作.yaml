@@ -1,0 +1,41 @@
+type: 'skill'
+id: 'Skill_文件操作'
+alias: 's17'
+name: '文件操作'
+version: '1.0.0'
+execution_type: 'tasks'
+description: |
+    对案件目录中的文件执行创建、复制、删除、修改操作。
+    支持的操作：创建新文件、复制文件内容到新文件、删除文件、修改文件内容。
+    适用场景: 用户要求保存内容到指定文件、复制文件、删除文件、编辑文件。
+
+inputs:
+    - name: 'source_docs'
+      required: false
+      description: '需要引用的源文件（复制、修改时由 Analyser 指定）'
+    - name: 'all_files'
+      type: 'file_list'
+      description: '当前案件所有文件的元数据列表'
+      required: true
+
+tasks:
+    - id: '分析'
+      prompt_ref: 'lexgent/prompts/p_文件操作.hbs'
+      outputs:
+          - id: 'result'
+      llm_config:
+          temperature: 0.1
+
+    - id: '执行'
+      type: api_request
+      method: POST
+      endpoint: '/cases/{caseId}/files/ops'
+      inputs:
+          - name: 'action'
+            ref: 'tasks.分析.result.action'
+          - name: 'filename'
+            ref: 'tasks.分析.result.filename'
+          - name: 'source'
+            ref: 'tasks.分析.result.source'
+          - name: 'content'
+            ref: 'tasks.分析.result.content'

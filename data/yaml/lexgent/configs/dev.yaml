@@ -1,0 +1,29 @@
+type: 'config'
+id: 'dev'
+name: '本地开发环境'
+
+data_server:
+    url: 'http://localhost:3000'
+
+llm:
+    - name: 'gemini'
+      sdk: 'gemini'
+      models:
+          - 'gemini/gemini-3-flash-preview'
+          - 'gemini/gemini-3-pro-preview'
+
+    - name: 'gemini_comp'
+      sdk: 'openai_compatible'
+      url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
+      api_key_env: 'GEMINI_API_KEY'
+      models:
+          - 'gemini_comp/gemini-3-flash-preview'
+          - 'gemini_comp/gemini-3-pro-preview'
+
+    - name: 'deepseek'
+      sdk: 'openai_compatible'
+      url: 'https://api.deepseek.com/v1'
+      api_key_env: 'DEEPSEEK_API_KEY'
+      models:
+          - 'deepseek/deepseek-chat'
+          - 'deepseek/deepseek-reasoner'

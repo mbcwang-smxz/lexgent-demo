@@ -1,0 +1,40 @@
+type: "task"
+id: "Task_法条检索"
+alias: "t01"
+name: "法条检索任务"
+description: "根据查询内容检索相关法律条文，支持工具调用。"
+
+# prompt 内联定义
+prompt: |
+  请根据以下查询检索相关法律条文：
+
+  查询内容：
+  {{#each inputs.query}}
+  ## {{filename}}
+  {{content}}
+  {{/each}}
+
+  请使用 Func_法条检索 工具进行检索，然后总结检索结果。
+  返回 JSON 格式：
+  ```json
+  {
+    "laws": [{"name": "法律名称", "article": "条款号", "content": "条文内容"}],
+    "summary": "总结说明"
+  }
+  ```
+
+inputs:
+  - name: "query"
+    description: "检索关键词或问题"
+    required: true
+
+outputs:
+  - id: "law_result"
+    description: "检索结果"
+
+functions:
+  - "Func_法条检索"
+
+llm_config:
+  temperature: 0.1
+  max_turns: 3

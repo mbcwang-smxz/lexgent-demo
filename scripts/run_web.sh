@@ -79,4 +79,4 @@ trap cleanup EXIT SIGINT SIGTERM
 
 # Run the web server (foreground, blocks until exit)
 echo "[→] Starting web server (first load may take a moment)..."
-exec npx ts-node src/web_server/index.ts
+exec npx ts-node src/web_server/index.ts "$@"

@@ -424,8 +424,25 @@ async function sendInput() {
 // --- Init on load ---
 $agent.addEventListener('change', loadSidebar);
 
-// Auto-init
-addMsg('system', 'Click "Init" to start a session.');
+// Load default agent from server config
+(async () => {
+  try {
+    const res = await fetch(`${API}/config`);
+    const cfg = await res.json();
+    if (cfg.defaultAgent) {
+      agentId = cfg.defaultAgent;
+      // Update select: add option if not present, then select it
+      if (!$agent.querySelector(`option[value="${cfg.defaultAgent}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = cfg.defaultAgent;
+        opt.textContent = cfg.defaultAgent;
+        $agent.appendChild(opt);
+      }
+      $agent.value = cfg.defaultAgent;
+    }
+  } catch {}
+  addMsg('system', 'Click "Init" to start a session.');
+})();
 </script>
 </body>
 </html>

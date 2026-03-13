@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import http from 'http';
 
-export function createProxyRoutes(agentUrl: string, dataUrl: string, yamlUrl: string): Router {
+export function createProxyRoutes(agentUrl: string, dataUrl: string, yamlUrl: string, defaultAgent?: string): Router {
     const router = Router();
 
-    // Config endpoint - expose server URLs to frontend
+    // Config endpoint - expose server URLs and default agent to frontend
     router.get('/config', (_req, res) => {
-        res.json({ dataServerUrl: dataUrl, yamlServerUrl: yamlUrl });
+        res.json({ dataServerUrl: dataUrl, yamlServerUrl: yamlUrl, defaultAgent: defaultAgent || 'law_agent' });
     });
 
     // --- Agent Engine proxies ---

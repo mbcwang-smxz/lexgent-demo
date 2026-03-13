@@ -8,6 +8,14 @@ const AGENT_SERVER_URL = CONFIG.system.agentServerUrl;
 const DATA_SERVER_URL = CONFIG.system.dataServerUrl;
 const YAML_SERVER_URL = CONFIG.system.yamlServerUrl;
 
+// Parse --agent / -a from argv
+function parseAgentArg(): string {
+    const args = process.argv.slice(2);
+    const idx = Math.max(args.indexOf('--agent'), args.indexOf('-a'));
+    return (idx !== -1 && args[idx + 1]) ? args[idx + 1] : (process.env.DEFAULT_AGENT || 'law_agent');
+}
+const DEFAULT_AGENT = parseAgentArg();
+
 const app = express();
 app.use(express.json());
 
@@ -15,7 +23,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API proxy routes
-app.use('/api', createProxyRoutes(AGENT_SERVER_URL, DATA_SERVER_URL, YAML_SERVER_URL));
+app.use('/api', createProxyRoutes(AGENT_SERVER_URL, DATA_SERVER_URL, YAML_SERVER_URL, DEFAULT_AGENT));
 
 // SPA fallback
 app.get('/{*splat}', (_req, res) => {

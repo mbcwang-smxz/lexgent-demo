@@ -487,7 +487,7 @@ export const handleRequest: http.RequestListener = async (req, res) => {
         const dirPath = path.join(YAML_BASE_DIR, agentId, subdir);
 
         if (!(await fs.pathExists(dirPath))) {
-            sendJson(res, []);
+            sendError(res, `Directory not found: ${agentId}/${subdir}`, 404);
             return;
         }
 

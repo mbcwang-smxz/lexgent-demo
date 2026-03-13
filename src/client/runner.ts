@@ -47,6 +47,11 @@ export class TaskRunner {
             });
             if (!res.ok) throw new Error(`Failed to create session: ${res.statusText}`);
             sessionData = await res.json() as any;
+            if (sessionData._warnings) {
+                for (const w of sessionData._warnings) {
+                    this.handler.log(`⚠ ${w}`);
+                }
+            }
         } catch (e: any) {
             this.handler.error(`[Error] Connection failed: ${e.message}`);
             return;

@@ -43,6 +43,12 @@ async function fetchSkillMap(agentId: string): Promise<Record<string, { query: s
             throw new Error(`${res.status} ${res.statusText} - ${body}`);
         }
         const data = await res.json() as any;
+        if (data._errors) {
+            for (const err of data._errors) {
+                console.warn(`⚠ ${err}`);
+            }
+            delete data._errors;
+        }
         console.log(`[debug] fetchSkillMap: got ${Object.keys(data).length} skills`);
         return data;
     } catch (e: any) {
@@ -60,6 +66,12 @@ async function fetchFunctionMap(agentId: string): Promise<Record<string, { desc:
             throw new Error(`${res.status} ${res.statusText} - ${body}`);
         }
         const data = await res.json() as any;
+        if (data._errors) {
+            for (const err of data._errors) {
+                console.warn(`⚠ ${err}`);
+            }
+            delete data._errors;
+        }
         console.log(`[debug] fetchFunctionMap: got ${Object.keys(data).length} functions`);
         return data;
     } catch (e: any) {
@@ -77,6 +89,12 @@ async function fetchTaskMap(agentId: string): Promise<Record<string, { desc: str
             throw new Error(`${res.status} ${res.statusText} - ${body}`);
         }
         const data = await res.json() as any;
+        if (data._errors) {
+            for (const err of data._errors) {
+                console.warn(`⚠ ${err}`);
+            }
+            delete data._errors;
+        }
         console.log(`[debug] fetchTaskMap: got ${Object.keys(data).length} tasks`);
         return data;
     } catch (e: any) {
@@ -290,7 +308,12 @@ LexGent 客户端工具使用说明:
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL })
                 });
-                const sess = await sessRes.json();
+                const sess = await sessRes.json() as any;
+                if (sess._warnings) {
+                    for (const w of sess._warnings) {
+                        console.warn(`⚠ ${w}`);
+                    }
+                }
 
                 const { targetId, args } = parseSlashCommand(query);
 
@@ -351,7 +374,12 @@ LexGent 客户端工具使用说明:
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, verbose: config.verbose, reuseSandbox: config.reuseSandbox })
         });
-        const sess = await res.json();
+        const sess = await res.json() as any;
+        if (sess._warnings) {
+            for (const w of sess._warnings) {
+                console.warn(`⚠ ${w}`);
+            }
+        }
         currentSessionId = sess.sessionId;
     } catch (e) {
         console.error("Failed to init session:", e);

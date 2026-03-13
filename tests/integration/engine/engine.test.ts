@@ -62,6 +62,43 @@ describe('Agent metadata', () => {
   });
 });
 
+describe('Agent metadata _errors for invalid agent', () => {
+  const BAD_AGENT = 'nonexistent-agent';
+
+  it('GET /agent/:id/skills should return _errors for nonexistent agent', async () => {
+    const res = await request(server.engineUrl, 'GET', `/agent/${BAD_AGENT}/skills`);
+    expect(res.status).toBe(200);
+    expect(res.body._errors).toBeDefined();
+    expect(Array.isArray(res.body._errors)).toBe(true);
+    expect(res.body._errors.length).toBeGreaterThan(0);
+    expect(res.body._errors[0]).toContain('[Agent]');
+  });
+
+  it('GET /agent/:id/functions should return _errors for nonexistent agent', async () => {
+    const res = await request(server.engineUrl, 'GET', `/agent/${BAD_AGENT}/functions`);
+    expect(res.status).toBe(200);
+    expect(res.body._errors).toBeDefined();
+    expect(Array.isArray(res.body._errors)).toBe(true);
+    expect(res.body._errors.length).toBeGreaterThan(0);
+    expect(res.body._errors[0]).toContain('[Agent]');
+  });
+
+  it('GET /agent/:id/tasks should return _errors for nonexistent agent', async () => {
+    const res = await request(server.engineUrl, 'GET', `/agent/${BAD_AGENT}/tasks`);
+    expect(res.status).toBe(200);
+    expect(res.body._errors).toBeDefined();
+    expect(Array.isArray(res.body._errors)).toBe(true);
+    expect(res.body._errors.length).toBeGreaterThan(0);
+    expect(res.body._errors[0]).toContain('[Agent]');
+  });
+
+  it('valid agent skills should NOT have _errors', async () => {
+    const res = await request(server.engineUrl, 'GET', `/agent/${AGENT_ID}/skills`);
+    expect(res.status).toBe(200);
+    expect(res.body._errors).toBeUndefined();
+  });
+});
+
 describe('Session lifecycle', () => {
   let sessionId: string;
 

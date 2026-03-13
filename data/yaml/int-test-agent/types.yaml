@@ -1,0 +1,13 @@
+type: "document_type"
+name: "测试文书类型"
+version: "1.0.0"
+types:
+  - id: "测试类型A"
+    name: "测试类型A"
+    category: "raw"
+    description: "用于测试的文档类型A"
+  - id: "测试类型B"
+    name: "测试类型B"
+    category: "derived"
+    format: "json"
+    description: "用于测试的文档类型B"

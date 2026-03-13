@@ -1,0 +1,14 @@
+type: "function"
+id: "Func_测试函数"
+calling_name: "test_function"
+name: "测试函数"
+description: "用于集成测试的函数。"
+
+endpoint: "/api/tools/echo"
+method: "POST"
+
+parameters:
+  message:
+    type: "string"
+    required: true
+    description: "测试消息"

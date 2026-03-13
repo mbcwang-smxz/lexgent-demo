@@ -1,0 +1,17 @@
+type: 'agent'
+name: '集成测试 Agent'
+version: '1.0.0'
+description: '用于集成测试的 Agent 配置。'
+model_name: 'test/test-model'
+skills:
+  - 'int-test-agent/skills/s*.yaml'
+tasks:
+  - 'int-test-agent/tasks/t*.yaml'
+functions:
+  - 'int-test-agent/functions/f*.yaml'
+document_types: 'int-test-agent/types.yaml'
+analyser_prompt: 'int-test-agent/prompts/p_test_prompt.hbs'
+default_config: 'dev'
+context_prop:
+  key: 'caseId'
+  path: '/cases/{caseId}/context'

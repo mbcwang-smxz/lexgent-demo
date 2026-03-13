@@ -8,8 +8,9 @@
     "start:yaml": "npx ts-node src/yaml_server/index.ts",
     "start:client": "npx ts-node src/client/index.ts",
     "start:web": "npx ts-node src/web_server/index.ts",
-    "test": "jest --forceExit",
-    "test:unit": "jest tests/unit"
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration"
   },
   "keywords": [],
   "author": "",

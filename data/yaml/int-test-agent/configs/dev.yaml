@@ -1,0 +1,14 @@
+type: 'config'
+id: 'dev'
+name: '测试开发环境'
+
+data_server:
+  url: 'http://localhost:3000'
+
+llm:
+  - name: 'test_provider'
+    sdk: 'openai_compatible'
+    url: 'http://localhost:8080/v1'
+    api_key_env: 'TEST_API_KEY'
+    models:
+      - 'test_provider/test-model'

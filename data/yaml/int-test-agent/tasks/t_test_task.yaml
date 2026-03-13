@@ -1,0 +1,18 @@
+type: "task"
+id: "Task_测试任务"
+alias: "t01"
+name: "测试任务"
+description: "用于集成测试的任务。"
+
+prompt: |
+  这是一个测试任务。
+  {{instruction}}
+
+inputs:
+  - name: "test_input"
+    description: "测试输入"
+    required: true
+
+outputs:
+  - id: "test_result"
+    description: "测试结果"

@@ -1,0 +1,20 @@
+type: "skill"
+id: "Skill_测试技能"
+alias: "s01"
+name: "测试技能"
+execution_type: "task"
+description: "用于集成测试的技能。"
+
+inputs:
+  - name: "test_input"
+    required: true
+    description: "测试输入"
+
+task:
+  prompt_ref: "int-test-agent/prompts/p_test_prompt.hbs"
+  outputs:
+    - id: "result"
+
+on_result:
+  save_file:
+    filename: "test_output.txt"

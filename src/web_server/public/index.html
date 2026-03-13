@@ -226,7 +226,7 @@ async function initSession() {
     const initRes = await fetch(`${API}/cases/init`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseNumber, reset: true })
+      body: JSON.stringify({ caseNumber })
     });
     const initData = await initRes.json();
     caseId = initData.caseId;

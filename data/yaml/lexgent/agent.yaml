@@ -31,3 +31,4 @@ context_prop:
 settings:
     timeout: 60000
     context_refresh_strategy: 'per_turn'
+    cache: false

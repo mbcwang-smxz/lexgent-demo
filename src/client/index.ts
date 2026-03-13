@@ -9,6 +9,22 @@ const AGENT_SERVER_URL = CONFIG.system.agentServerUrl;
 const DATA_SERVER_URL = CONFIG.system.dataServerUrl;
 const YAML_SERVER_URL = CONFIG.system.yamlServerUrl;
 
+/** Map log type to icon prefix */
+function logIcon(type?: string): string {
+    switch (type) {
+        case 'init':     return '⚙ ';
+        case 'request':  return '📨 ';
+        case 'analyser': return '🔍 ';
+        case 'plan':     return '📋 ';
+        case 'step':     return '▶ ';
+        case 'result':   return '✔ ';
+        case 'skip':     return '⏭ ';
+        case 'error':    return '❌ ';
+        case 'reply':    return '💬 ';
+        default:         return '';
+    }
+}
+
 async function checkServerConnection(url: string, serverName: string): Promise<boolean> {
     try {
         const controller = new AbortController();
@@ -45,7 +61,7 @@ async function fetchSkillMap(agentId: string): Promise<Record<string, { query: s
         const data = await res.json() as any;
         if (data._errors) {
             for (const err of data._errors) {
-                console.warn(`⚠ ${err}`);
+                console.warn(`❌ ${err}`);
             }
             delete data._errors;
         }
@@ -68,7 +84,7 @@ async function fetchFunctionMap(agentId: string): Promise<Record<string, { desc:
         const data = await res.json() as any;
         if (data._errors) {
             for (const err of data._errors) {
-                console.warn(`⚠ ${err}`);
+                console.warn(`❌ ${err}`);
             }
             delete data._errors;
         }
@@ -91,7 +107,7 @@ async function fetchTaskMap(agentId: string): Promise<Record<string, { desc: str
         const data = await res.json() as any;
         if (data._errors) {
             for (const err of data._errors) {
-                console.warn(`⚠ ${err}`);
+                console.warn(`❌ ${err}`);
             }
             delete data._errors;
         }
@@ -419,13 +435,9 @@ LexGent 客户端工具使用说明:
         enqueueSse(async () => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.skillId && data.skillTitle) {
-                    process.stdout.write(`\r⚙ ${data.skillTitle}...  `);
-                    inProgressLine = true;
-                } else {
-                    if (inProgressLine) { process.stdout.write('\n'); inProgressLine = false; }
-                    cliHandler.log(data.text || data.message);
-                }
+                if (inProgressLine) { process.stdout.write('\n'); inProgressLine = false; }
+                const icon = logIcon(data.type);
+                cliHandler.log(`${icon}${data.text || data.message}`);
             } catch (e) { /* ignore */ }
         });
     });

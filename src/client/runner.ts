@@ -2,6 +2,22 @@
 import readline from 'readline';
 import { ICaseDataStore } from './case_store';
 
+/** Map log type to icon prefix */
+function logIcon(type?: string): string {
+    switch (type) {
+        case 'init':     return '⚙ ';
+        case 'request':  return '📨 ';
+        case 'analyser': return '🔍 ';
+        case 'plan':     return '📋 ';
+        case 'step':     return '▶ ';
+        case 'result':   return '✔ ';
+        case 'skip':     return '⏭ ';
+        case 'error':    return '❌ ';
+        case 'reply':    return '💬 ';
+        default:         return '';
+    }
+}
+
 export interface IActionHandler {
     log(text: string): void;
     error(text: string): void;
@@ -173,7 +189,8 @@ export class TaskRunner {
 
     private async processEvent(sessionId: string, evt: any, resolve: () => void) {
         if (evt.type === 'log') {
-            process.stdout.write(evt.data.text + '\n');
+            const icon = logIcon(evt.data.type);
+            process.stdout.write(`${icon}${evt.data.text}\n`);
         } else if (evt.type === 'error') {
             this.handler.error(`\n❌ AGENT ERROR: ${evt.data.text}`);
             if (evt.data.error) this.handler.error(evt.data.error);

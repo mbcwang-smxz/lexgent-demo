@@ -123,6 +123,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 
 <script>
 const API = '/api';
+const LOG_ICONS = {
+  init: '\u2699\uFE0F', request: '\uD83D\uDCE8', analyser: '\uD83D\uDD0D',
+  plan: '\uD83D\uDCCB', step: '\u25B6\uFE0F', result: '\u2714\uFE0F',
+  skip: '\u23ED\uFE0F', error: '\u274C', reply: '\uD83D\uDCAC',
+};
+function logIcon(type) { return LOG_ICONS[type] ? LOG_ICONS[type] + ' ' : ''; }
 let agentId = 'law_agent';
 let caseId = null;
 let sessionId = null;
@@ -170,6 +176,14 @@ async function loadList(type, sectionId) {
   try {
     const res = await fetch(`${API}/agent/${agentId}/${type}`);
     const data = await res.json();
+    // Extract and display _errors if present
+    const errors = data._errors;
+    if (errors) {
+      delete data._errors;
+      for (const err of errors) {
+        addMsg('error', '\u274C ' + escHtml(err));
+      }
+    }
     const entries = Object.entries(data);
     if (entries.length === 0) {
       section.innerHTML = `<h3>${type}</h3><div class="sidebar-empty">None</div>`;
@@ -225,6 +239,12 @@ async function initSession() {
     });
     const sessData = await sessRes.json();
     sessionId = sessData.sessionId;
+    // Display session warnings if present
+    if (sessData._warnings) {
+      for (const w of sessData._warnings) {
+        addMsg('error', '\u26A0\uFE0F ' + escHtml(w));
+      }
+    }
 
     // Connect SSE
     connectSSE();
@@ -247,7 +267,7 @@ function connectSSE() {
 
   sse.addEventListener('log', (e) => {
     const data = JSON.parse(e.data);
-    addMsg('log', escHtml(data.text || data.message || ''));
+    addMsg('log', logIcon(data.type) + escHtml(data.text || data.message || ''));
   });
 
   sse.addEventListener('error', (e) => {

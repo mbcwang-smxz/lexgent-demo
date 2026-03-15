@@ -11,7 +11,7 @@ import { TaskRunner, IActionHandler } from './runner';
 const LEXGENT_DIR = path.join(process.env.HOME || '', '.lexgent');
 const UID_PATH = path.join(LEXGENT_DIR, 'uid');
 const PROFILE_PATH = path.join(LEXGENT_DIR, 'user.md');
-const HISTORY_PATH = path.join(LEXGENT_DIR, 'chat_history.md');
+const HISTORY_DIR = path.join(LEXGENT_DIR, 'history');
 
 function getOrCreateUid(): string {
     if (!fs.existsSync(LEXGENT_DIR)) fs.mkdirSync(LEXGENT_DIR, { recursive: true });
@@ -30,13 +30,14 @@ function writeUserProfile(content: string): void {
     fs.writeFileSync(PROFILE_PATH, content, 'utf-8');
 }
 
-function readChatHistory(): string {
-    return fs.existsSync(HISTORY_PATH) ? fs.readFileSync(HISTORY_PATH, 'utf-8') : '';
+function readChatHistory(caseNumber: string): string {
+    const p = path.join(HISTORY_DIR, `${caseNumber}.md`);
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : '';
 }
 
-function writeChatHistory(content: string): void {
-    if (!fs.existsSync(LEXGENT_DIR)) fs.mkdirSync(LEXGENT_DIR, { recursive: true });
-    fs.writeFileSync(HISTORY_PATH, content, 'utf-8');
+function writeChatHistory(caseNumber: string, content: string): void {
+    if (!fs.existsSync(HISTORY_DIR)) fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    fs.writeFileSync(path.join(HISTORY_DIR, `${caseNumber}.md`), content, 'utf-8');
 }
 
 const AGENT_SERVER_URL = CONFIG.system.agentServerUrl;
@@ -335,11 +336,11 @@ LexGent 客户端工具使用说明:
         console.log('[System] 用户档案已更新。');
     };
     runner.onHistoryUpdate = (content) => {
-        writeChatHistory(content);
+        writeChatHistory(config.caseNumber, content);
     };
     const clientUid = getOrCreateUid();
     const clientProfile = readUserProfile();
-    const clientHistory = readChatHistory();
+    const clientHistory = readChatHistory(config.caseNumber);
     const runOptions = {
         verbose: config.verbose,
         reuseSandbox: config.reuseSandbox,
@@ -433,7 +434,7 @@ LexGent 客户端工具使用说明:
     // Initialize Session
     const uid = getOrCreateUid();
     const userProfile = readUserProfile();
-    const chatHistory = readChatHistory();
+    const chatHistory = readChatHistory(config.caseNumber);
     let currentSessionId: string = '';
     try {
         const res = await fetch(`${AGENT_SERVER_URL}/session`, {
@@ -588,7 +589,7 @@ LexGent 客户端工具使用说明:
             try {
                 const data = JSON.parse(event.data);
                 if (data.content != null) {
-                    writeChatHistory(data.content);
+                    writeChatHistory(config.caseNumber, data.content);
                 }
             } catch (e) { /* ignore */ }
         });

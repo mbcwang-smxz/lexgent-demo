@@ -132,8 +132,8 @@ function getOrCreateUid() {
 }
 function readUserProfile() { return localStorage.getItem('lexgent_user_profile') || ''; }
 function writeUserProfile(c) { localStorage.setItem('lexgent_user_profile', c); }
-function readChatHistory() { return localStorage.getItem('lexgent_chat_history') || ''; }
-function writeChatHistory(c) { localStorage.setItem('lexgent_chat_history', c); }
+function readChatHistory(cn) { return localStorage.getItem('lexgent_chat_history_' + cn) || ''; }
+function writeChatHistory(cn, c) { localStorage.setItem('lexgent_chat_history_' + cn, c); }
 
 const LOG_ICONS = {
   init: '\u2699\uFE0F', request: '\uD83D\uDCE8', analyser: '\uD83D\uDD0D',
@@ -143,6 +143,7 @@ const LOG_ICONS = {
 function logIcon(type) { return LOG_ICONS[type] ? LOG_ICONS[type] + ' ' : ''; }
 let agentId = 'law_agent';
 let caseId = null;
+let currentCaseNumber = null;
 let sessionId = null;
 let DATA_SERVER_URL = '';
 let YAML_SERVER_URL = '';
@@ -226,6 +227,7 @@ function fillCmd(cmd) {
 async function initSession() {
   agentId = $agent.value;
   const caseNumber = $case.value || 'case-101';
+  currentCaseNumber = caseNumber;
 
   addMsg('system', `Initializing case ${escHtml(caseNumber)}...`);
 
@@ -250,7 +252,7 @@ async function initSession() {
     const sessRes = await fetch(`${API}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseNumber, caseId, agentId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, uid, user_profile, chat_history: readChatHistory() })
+      body: JSON.stringify({ caseNumber, caseId, agentId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, uid, user_profile, chat_history: readChatHistory(caseNumber) })
     });
     const sessData = await sessRes.json();
     sessionId = sessData.sessionId;
@@ -325,7 +327,7 @@ function connectSSE() {
     try {
       const data = JSON.parse(e.data);
       if (data.content != null) {
-        writeChatHistory(data.content);
+        writeChatHistory(currentCaseNumber, data.content);
       }
     } catch {}
   });

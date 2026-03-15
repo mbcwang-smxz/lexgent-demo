@@ -146,4 +146,42 @@ describe('Session lifecycle', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(false);
   });
+
+  describe('with user data fields (uid, user_profile, chat_history)', () => {
+    let sessionId: string;
+
+    it('POST /session should accept uid, user_profile, chat_history', async () => {
+      const res = await request(server.engineUrl, 'POST', '/session', {
+        caseNumber: CASE_ID,
+        caseId: CASE_ID,
+        agentId: AGENT_ID,
+        uid: 'test-user-001',
+        user_profile: { name: '测试用户', role: 'lawyer' },
+        chat_history: [
+          { role: 'user', content: '你好' },
+          { role: 'assistant', content: '你好，有什么可以帮助你的？' },
+        ],
+        ...(server.dataUrl ? { dataServerUrl: server.dataUrl } : {}),
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.sessionId).toBeDefined();
+      expect(res.body.status).toBe('ready');
+      sessionId = res.body.sessionId;
+    });
+
+    it('GET /session/:id/events should return SSE connected event', async () => {
+      const sse = await connectSSE(server.engineUrl, `/session/${sessionId}/events`);
+      expect(sse.status).toBe(200);
+      expect(sse.headers['content-type']).toBe('text/event-stream');
+      expect(sse.data).toContain('event: connected');
+      expect(sse.data).toContain(sessionId);
+      sse.close();
+    });
+
+    it('DELETE /session/:id should return ok true', async () => {
+      const res = await request(server.engineUrl, 'DELETE', `/session/${sessionId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+    });
+  });
 });

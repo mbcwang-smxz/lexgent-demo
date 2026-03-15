@@ -39,11 +39,17 @@ export class TaskRunner {
         this.caseDataStore = caseDataStore;
     }
 
+    /** Callback for profile_update events */
+    onProfileUpdate?: (content: string) => void;
+
+    /** Callback for history_update events */
+    onHistoryUpdate?: (content: string) => void;
+
     async runTask(
         caseNumber: string,
         caseId: string,
         query: string,
-        options: { verbose: boolean, reuseSandbox: boolean, agentId?: string, configId?: string }
+        options: { verbose: boolean, reuseSandbox: boolean, agentId?: string, configId?: string, uid?: string, user_profile?: string, chat_history?: string }
     ) {
         this.handler.log(`[System] Initializing session via Agent Server...`);
 
@@ -213,6 +219,14 @@ export class TaskRunner {
 
         } else if (evt.type === 'action') {
             await this.handleAction(evt.data);
+        } else if (evt.type === 'profile_update') {
+            if (evt.data.content && this.onProfileUpdate) {
+                this.onProfileUpdate(evt.data.content);
+            }
+        } else if (evt.type === 'history_update') {
+            if (evt.data.content != null && this.onHistoryUpdate) {
+                this.onHistoryUpdate(evt.data.content);
+            }
         } else if (evt.type === 'complete') {
             this.handler.log(`\n🏁 TASK COMPLETE (${evt.data.status}).`);
             if (evt.data.summary) this.handler.log(evt.data.summary);

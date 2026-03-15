@@ -71,6 +71,16 @@ export function createProxyRoutes(agentUrl: string, dataUrl: string, yamlUrl: st
     // --- Data Server proxies ---
     router.post('/cases/init', (req, res) => proxyJson(dataUrl, req, res, 'POST'));
 
+    router.get('/cases/:caseId/metadata', (req, res) => {
+        const targetPath = `/cases/${req.params.caseId}/metadata`;
+        proxyJson(dataUrl, req, res, 'GET', targetPath);
+    });
+
+    router.get('/cases/:caseId/files/scan', (req, res) => {
+        const targetPath = `/cases/${req.params.caseId}/files/scan`;
+        proxyJson(dataUrl, req, res, 'GET', targetPath);
+    });
+
     router.get('/cases/:caseId/files/:filename', (req, res) => {
         const targetPath = `/cases/${req.params.caseId}/files/${encodeURIComponent(req.params.filename)}`;
         proxyJson(dataUrl, req, res, 'GET', targetPath);

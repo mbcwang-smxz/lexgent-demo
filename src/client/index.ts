@@ -1,9 +1,43 @@
 /// <reference path="../types/modules.d.ts" />
 import readline from 'readline';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import { CONFIG } from '@/config/settings';
 import { CaseDataStore } from './case_store';
 import { parseArgs } from './args';
 import { TaskRunner, IActionHandler } from './runner';
+
+const LEXGENT_DIR = path.join(process.env.HOME || '', '.lexgent');
+const UID_PATH = path.join(LEXGENT_DIR, 'uid');
+const PROFILE_PATH = path.join(LEXGENT_DIR, 'user.md');
+const HISTORY_PATH = path.join(LEXGENT_DIR, 'chat_history.md');
+
+function getOrCreateUid(): string {
+    if (!fs.existsSync(LEXGENT_DIR)) fs.mkdirSync(LEXGENT_DIR, { recursive: true });
+    if (fs.existsSync(UID_PATH)) return fs.readFileSync(UID_PATH, 'utf-8').trim();
+    const uid = crypto.randomUUID();
+    fs.writeFileSync(UID_PATH, uid, 'utf-8');
+    return uid;
+}
+
+function readUserProfile(): string {
+    return fs.existsSync(PROFILE_PATH) ? fs.readFileSync(PROFILE_PATH, 'utf-8') : '';
+}
+
+function writeUserProfile(content: string): void {
+    if (!fs.existsSync(LEXGENT_DIR)) fs.mkdirSync(LEXGENT_DIR, { recursive: true });
+    fs.writeFileSync(PROFILE_PATH, content, 'utf-8');
+}
+
+function readChatHistory(): string {
+    return fs.existsSync(HISTORY_PATH) ? fs.readFileSync(HISTORY_PATH, 'utf-8') : '';
+}
+
+function writeChatHistory(content: string): void {
+    if (!fs.existsSync(LEXGENT_DIR)) fs.mkdirSync(LEXGENT_DIR, { recursive: true });
+    fs.writeFileSync(HISTORY_PATH, content, 'utf-8');
+}
 
 const AGENT_SERVER_URL = CONFIG.system.agentServerUrl;
 const DATA_SERVER_URL = CONFIG.system.dataServerUrl;
@@ -296,11 +330,24 @@ LexGent 客户端工具使用说明:
 
     const runner = new TaskRunner(AGENT_SERVER_URL, cliHandler, { dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL });
     runner.setCaseDataStore(caseDataStore);
+    runner.onProfileUpdate = (content) => {
+        writeUserProfile(content);
+        console.log('[System] 用户档案已更新。');
+    };
+    runner.onHistoryUpdate = (content) => {
+        writeChatHistory(content);
+    };
+    const clientUid = getOrCreateUid();
+    const clientProfile = readUserProfile();
+    const clientHistory = readChatHistory();
     const runOptions = {
         verbose: config.verbose,
         reuseSandbox: config.reuseSandbox,
         agentId,
         configId: config.configId,
+        uid: clientUid,
+        user_profile: clientProfile,
+        chat_history: clientHistory,
     };
 
     // Non-interactive mode
@@ -379,16 +426,20 @@ LexGent 客户端工具使用说明:
     console.log("  /t            - 显示任务(Task)列表");
     console.log("  !clear-cache  - 清除LLM缓存");
     console.log("  !reset-context - 重置上下文（删除生成的文件）");
+    console.log("  !dir          - 列出案件文档");
     console.log("  exit          - 退出");
     console.log("");
 
     // Initialize Session
+    const uid = getOrCreateUid();
+    const userProfile = readUserProfile();
+    const chatHistory = readChatHistory();
     let currentSessionId: string = '';
     try {
         const res = await fetch(`${AGENT_SERVER_URL}/session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, verbose: config.verbose, reuseSandbox: config.reuseSandbox })
+            body: JSON.stringify({ caseNumber: config.caseNumber, caseId, agentId, configId: config.configId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, verbose: config.verbose, reuseSandbox: config.reuseSandbox, uid, user_profile: userProfile, chat_history: chatHistory })
         });
         const sess = await res.json() as any;
         if (sess._warnings) {
@@ -406,6 +457,7 @@ LexGent 客户端工具使用说明:
     let commandCompleteResolve: (() => void) | null = null;
 
     let inProgressLine = false;
+    let initShown = false; // Suppress init logs after first task completes
 
     // Setup SSE listener with sequential event queue
     // EventSource fires callbacks synchronously — async handlers can overlap.
@@ -435,6 +487,8 @@ LexGent 客户端工具使用说明:
         enqueueSse(async () => {
             try {
                 const data = JSON.parse(event.data);
+                // Suppress init logs after first task completes
+                if (initShown && data.type === 'init') return;
                 if (inProgressLine) { process.stdout.write('\n'); inProgressLine = false; }
                 const icon = logIcon(data.type);
                 cliHandler.log(`${icon}${data.text || data.message}`);
@@ -489,6 +543,7 @@ LexGent 客户端工具使用说明:
                 const data = JSON.parse(event.data);
                 if (inProgressLine) { process.stdout.write('\n'); inProgressLine = false; }
                 cliHandler.log(`\n✅ Task ${data.status === 'success' ? 'completed' : 'failed'}`);
+                initShown = true; // Suppress init logs for subsequent tasks
                 if (commandCompleteResolve) {
                     commandCompleteResolve();
                 }
@@ -513,6 +568,29 @@ LexGent 客户端工具使用说明:
             } catch (e) {
                 console.error('[Ask] Error:', e);
             }
+        });
+    });
+
+    sse.addEventListener('profile_update', (event: any) => {
+        enqueueSse(async () => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.content) {
+                    writeUserProfile(data.content);
+                    console.log('[System] 用户档案已更新。');
+                }
+            } catch (e) { /* ignore */ }
+        });
+    });
+
+    sse.addEventListener('history_update', (event: any) => {
+        enqueueSse(async () => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.content != null) {
+                    writeChatHistory(data.content);
+                }
+            } catch (e) { /* ignore */ }
         });
     });
 
@@ -610,8 +688,34 @@ LexGent 客户端工具使用说明:
                     return;
                 }
 
+                if (cmd === 'dir') {
+                    try {
+                        const files = await caseDataStore.listFiles();
+                        if (files.length === 0) {
+                            console.log('[Dir] 当前案件没有文档。');
+                        } else {
+                            console.log(`\n案件文档列表 (${caseId}):`);
+                            console.log('─'.repeat(70));
+                            console.log(`  ${'ID'.padEnd(6)} ${'类型'.padEnd(12)} ${'大小'.padStart(8)}  文件名`);
+                            console.log('─'.repeat(70));
+                            for (const f of files) {
+                                const sizeStr = f.size >= 1024
+                                    ? `${(f.size / 1024).toFixed(1)}KB`
+                                    : `${f.size}B`;
+                                console.log(`  ${f.id.padEnd(6)} ${f.type.padEnd(12)} ${sizeStr.padStart(8)}  ${f.filename}`);
+                            }
+                            console.log('─'.repeat(70));
+                            console.log(`  共 ${files.length} 个文档\n`);
+                        }
+                    } catch (e: any) {
+                        console.error(`[Dir] Error: ${e.message}`);
+                    }
+                    prompt();
+                    return;
+                }
+
                 console.log(`Unknown command: ${input}`);
-                console.log(`Available: !clear-cache, !reset-context`);
+                console.log(`Available: !clear-cache, !reset-context, !dir`);
                 prompt();
                 return;
             }
@@ -664,8 +768,28 @@ LexGent 客户端工具使用说明:
                 return;
             }
 
-            // Regular text - send to Analyser via TaskRunner
-            await runner.runTask(config.caseNumber, caseId, input, runOptions);
+            // Regular text - send to Analyser via existing session (preserves chat history)
+            const completionPromise = new Promise<void>(resolve => {
+                commandCompleteResolve = resolve;
+            });
+            try {
+                const res = await fetch(`${AGENT_SERVER_URL}/session/${currentSessionId}/task`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: input })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({ error: res.statusText }));
+                    console.error(`[Task] Error: ${errData.error || res.statusText}`);
+                    commandCompleteResolve = null;
+                } else {
+                    await completionPromise;
+                }
+            } catch (e: any) {
+                console.error("[Task] Error:", e.message);
+            } finally {
+                commandCompleteResolve = null;
+            }
             prompt();
         });
     };

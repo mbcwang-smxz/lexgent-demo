@@ -173,6 +173,9 @@ Session 模式通过 SSE（Server-Sent Events）实现实时事件推送，是 C
 | `dataServerUrl` | string | 否 | Data Server 地址，缺省使用 Agent 配置/环境变量/默认值 |
 | `verbose` | boolean | 否 | 是否输出详细日志 |
 | `reuseSandbox` | boolean | 否 | 是否复用沙箱 |
+| `uid` | string | 否 | 用户唯一标识（UUID），由 Client 本地生成并持久化 |
+| `user_profile` | string | 否 | 用户档案（Markdown 格式），从 Client 本地存储读取 |
+| `chat_history` | string | 否 | 对话历史（`User:/Assistant:` 格式），从 Client 本地存储读取 |
 
 **响应**: `200`
 ```json
@@ -224,6 +227,8 @@ data: {"status":"success"}
 | `progress` | 进度更新 |
 | `complete` | 任务完成（`status: "success"` 或 `"failed"`） |
 | `action` | 客户端操作通知 |
+| `profile_update` | 用户档案更新，Client 需写入本地存储。数据: `{ "content": "..." }` |
+| `history_update` | 对话历史更新，Client 需写入本地存储。数据: `{ "content": "..." }` |
 
 ### 4.3 提交任务
 

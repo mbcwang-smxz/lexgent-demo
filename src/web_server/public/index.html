@@ -123,6 +123,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 
 <script>
 const API = '/api';
+
+// --- UID + User Profile (localStorage) ---
+function getOrCreateUid() {
+  let uid = localStorage.getItem('lexgent_uid');
+  if (!uid) { uid = crypto.randomUUID(); localStorage.setItem('lexgent_uid', uid); }
+  return uid;
+}
+function readUserProfile() { return localStorage.getItem('lexgent_user_profile') || ''; }
+function writeUserProfile(c) { localStorage.setItem('lexgent_user_profile', c); }
+function readChatHistory() { return localStorage.getItem('lexgent_chat_history') || ''; }
+function writeChatHistory(c) { localStorage.setItem('lexgent_chat_history', c); }
+
 const LOG_ICONS = {
   init: '\u2699\uFE0F', request: '\uD83D\uDCE8', analyser: '\uD83D\uDD0D',
   plan: '\uD83D\uDCCB', step: '\u25B6\uFE0F', result: '\u2714\uFE0F',
@@ -137,6 +149,7 @@ let YAML_SERVER_URL = '';
 let sse = null;
 let busy = false;
 let currentAskId = null;
+let initShown = false;
 
 const $msg = document.getElementById('messages');
 const $input = document.getElementById('cmdInput');
@@ -232,10 +245,12 @@ async function initSession() {
     caseId = initData.caseId;
 
     // Create session
+    const uid = getOrCreateUid();
+    const user_profile = readUserProfile();
     const sessRes = await fetch(`${API}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseNumber, caseId, agentId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL })
+      body: JSON.stringify({ caseNumber, caseId, agentId, dataServerUrl: DATA_SERVER_URL, yamlServerUrl: YAML_SERVER_URL, uid, user_profile, chat_history: readChatHistory() })
     });
     const sessData = await sessRes.json();
     sessionId = sessData.sessionId;
@@ -267,6 +282,7 @@ function connectSSE() {
 
   sse.addEventListener('log', (e) => {
     const data = JSON.parse(e.data);
+    if (initShown && data.type === 'init') return;
     addMsg('log', logIcon(data.type) + escHtml(data.text || data.message || ''));
   });
 
@@ -291,7 +307,27 @@ function connectSSE() {
     const data = JSON.parse(e.data);
     const ok = data.status === 'success';
     addMsg('complete', `${ok ? '\u2705' : '\u274C'} Task ${ok ? 'completed' : 'failed'}${data.summary ? ' - ' + escHtml(data.summary) : ''}`);
+    initShown = true;
     setBusy(false);
+  });
+
+  sse.addEventListener('profile_update', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.content) {
+        writeUserProfile(data.content);
+        addMsg('system', '\uD83D\uDC64 用户档案已更新。');
+      }
+    } catch {}
+  });
+
+  sse.addEventListener('history_update', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.content != null) {
+        writeChatHistory(data.content);
+      }
+    } catch {}
   });
 }
 
@@ -361,21 +397,62 @@ async function sendInput() {
   $input.value = '';
   addMsg('user', escHtml(input));
 
-  if (input.startsWith('/')) {
-    // List commands
-    if (input === '/' || input === '/s' || input === '/f' || input === '/t' || input === '/list') {
-      loadSidebar();
-      addMsg('system', 'Sidebar refreshed.');
-      return;
-    }
+  // ! commands (local operations)
+  if (input.startsWith('!')) {
+    const cmd = input.substring(1).toLowerCase().trim();
 
-    // ! commands
-    if (input === '!clear-cache') {
+    if (cmd === 'clear-cache') {
       try {
         const res = await fetch(`${API}/agent/${agentId}/clear-cache`, { method: 'POST' });
         const data = await res.json();
         addMsg('system', data.message || data.status || 'Cache cleared');
       } catch (e) { addMsg('error', e.message); }
+      return;
+    }
+
+    if (cmd === 'dir') {
+      try {
+        const [metaRes, scanRes] = await Promise.all([
+          fetch(`${API}/cases/${caseId}/metadata`),
+          fetch(`${API}/cases/${caseId}/files/scan`),
+        ]);
+        const meta = await metaRes.json();
+        const scan = await scanRes.json();
+        const sizeMap = new Map();
+        for (const f of scan.files) sizeMap.set(f.filename, f.size);
+
+        const files = (meta.files || []).map(f => ({
+          id: f.id, filename: f.filename,
+          type: f.type || '', size: sizeMap.get(f.filename) ?? 0,
+        }));
+
+        if (files.length === 0) {
+          addMsg('system', '当前案件没有文档。');
+        } else {
+          let html = `<b>案件文档列表 (${escHtml(caseId)})</b><br>`;
+          html += '<table style="width:100%;font-size:12px;border-collapse:collapse;font-family:var(--mono)">';
+          html += '<tr style="text-align:left;border-bottom:1px solid var(--border)"><th style="padding:4px 8px">ID</th><th style="padding:4px 8px">类型</th><th style="padding:4px 8px;text-align:right">大小</th><th style="padding:4px 8px">文件名</th></tr>';
+          for (const f of files) {
+            const sizeStr = f.size >= 1024 ? `${(f.size / 1024).toFixed(1)}KB` : `${f.size}B`;
+            html += `<tr><td style="padding:2px 8px">${escHtml(f.id)}</td><td style="padding:2px 8px">${escHtml(f.type)}</td><td style="padding:2px 8px;text-align:right">${escHtml(sizeStr)}</td><td style="padding:2px 8px">${escHtml(f.filename)}</td></tr>`;
+          }
+          html += '</table>';
+          html += `<br>共 ${files.length} 个文档`;
+          addMsg('system', html);
+        }
+      } catch (e) { addMsg('error', e.message); }
+      return;
+    }
+
+    addMsg('error', `Unknown command: ${escHtml(input)}. Available: !clear-cache, !dir`);
+    return;
+  }
+
+  if (input.startsWith('/')) {
+    // List commands
+    if (input === '/' || input === '/s' || input === '/f' || input === '/t' || input === '/list') {
+      loadSidebar();
+      addMsg('system', 'Sidebar refreshed.');
       return;
     }
 

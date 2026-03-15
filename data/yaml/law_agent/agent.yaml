@@ -22,6 +22,8 @@ analyser_prompt: 'law_agent/prompts/p_analyser.hbs'
 
 init_skill: 'law_agent/skills/s_初始化.yaml'
 
+classify_prompt: 'law_agent/prompts/p_batch_classify.hbs'
+
 default_config: 'law_agent/configs/dev.yaml'
 
 context_prop:

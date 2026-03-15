@@ -27,3 +27,10 @@ llm:
       models:
           - 'deepseek/deepseek-chat'
           - 'deepseek/deepseek-reasoner'
+
+classify:
+    batch_size: 5
+    concurrency: 3
+    llm_config:
+        temperature: 0.1
+        max_tokens: 1024

@@ -463,10 +463,10 @@ on_result:
 | `type_ref` | 否 | 关联 `types.yaml` 中的文档类型 ID |
 | `source` | 否 | 当 LLM 返回包含多个部分的 JSON 时，用此字段指定提取哪个字段 |
 
-**多输出示例**：一个技能产出两个文件，通过 `source` 从 LLM 返回的 JSON 中分别提取：
+**多输出示例**（使用 `on_result` 手动模式）：一个技能产出两个文件，通过 `source` 从 LLM 返回的 JSON 中分别提取：
 
 ```yaml
-# s_事实筛选.yaml — LLM 返回 {"D05": {...}, "D10": {...}}
+# 手动模式示例（不推荐，推荐使用 outputs.type_ref + source 自动保存）
 on_result:
   - type: "save_file"
     id: "D05"
@@ -478,6 +478,21 @@ on_result:
     filename: "D10_有争议事实.json"
     type_ref: "有争议事实"
     source: "D10"                   # ← 提取 JSON 中的 "D10" 字段
+```
+
+**推荐写法**（自动保存 + source 提取）：
+
+```yaml
+# s_事实筛选.yaml — LLM 返回 {"D05": {...}, "D10": {...}}
+outputs:
+  - type_ref: "无争议事实"
+    source: "D05"                   # ← 提取 JSON 中的 "D05" 字段
+  - type_ref: "有争议事实"
+    source: "D10"                   # ← 提取 JSON 中的 "D10" 字段
+task:
+  prompt_ref: "law_agent/prompts/p_事实筛选.hbs"
+  llm_config:
+    temperature: 0.1
 ```
 
 ### 8.2 `api_call` — 调用数据服务接口
@@ -845,13 +860,10 @@ execution_type: "tasks"
 inputs:
   - name: "source_docs"
     required: true
-    description: "事实认定结果(D07)。"
+    description: "事实认定结果。"
 
-on_result:
-  - type: "save_file"
-    id: "D08"
-    filename: "D08_争议焦点说理.json"
-    type_ref: "裁判说理"
+outputs:
+  - type_ref: "裁判说理"              # 框架自动分配 D## ID 并保存
 
 tasks:
   # 步骤 1: 引用外部 Task 文件进行法条检索
@@ -878,19 +890,19 @@ tasks:
 
   # 步骤 3: 引用外部 Prompt 文件，使用步骤 2 的输出
   - id: "文书撰写"
-    prompt_ref: "law_agent/prompts/p_裁判起草"
+    prompt_ref: "law_agent/prompts/p_裁判起草.hbs"
     inputs:
       - name: "analysis"
         ref: "tasks.逻辑分析.分析结果"   # ← 来自步骤 2 输出
     outputs:
-      - id: "D08"
+      - id: "result"
     functions:
       - "Func_案件查询"               # 可调用函数
     llm_config:
       temperature: 0.2
 ```
 
-数据流向：`技能输入 → 步骤1(法条检索) → 步骤2(逻辑分析) → 步骤3(文书撰写) → 保存D08`
+数据流向：`技能输入 → 步骤1(法条检索) → 步骤2(逻辑分析) → 步骤3(文书撰写) → 自动保存(裁判说理)`
 
 ### 10.4 外部 Task 文件
 
@@ -968,7 +980,7 @@ tasks:
       - name: "parties"
         ref: "tasks.s_当事人提取.party_info"      # 引用 skill_ref 的输出
     outputs:
-      - id: "D09"
+      - id: "result"
 ```
 
 **`skill_ref` vs `task_ref` 的区别**：

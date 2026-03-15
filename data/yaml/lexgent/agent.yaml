@@ -22,6 +22,8 @@ analyser_prompt: 'lexgent/prompts/p_analyser.hbs'
 
 init_skill: 'lexgent/skills/s_初始化.yaml'
 
+classify_prompt: 'lexgent/prompts/p_batch_classify.hbs'
+
 default_config: 'lexgent/configs/dev.yaml'
 
 context_prop:
